@@ -4,7 +4,6 @@
 // is included below.
 #define WINVER 0x0500
 #include <windows.h>
-#include <stdio.h>
 
 #include "fakeinput.h"
 
@@ -12,7 +11,7 @@ void initFakeInput() {}
 
 void freeFakeInput() {}
 
-void sendKeyboardEvent(DWORD flags, WORD scan)
+void sendUnicodeEvent(DWORD flags, WORD scan)
 {
     INPUT ip;
     ip.type = INPUT_KEYBOARD;
@@ -25,22 +24,35 @@ void sendKeyboardEvent(DWORD flags, WORD scan)
     SendInput(1, &ip, sizeof(INPUT));
 }
 
-void sendMouseEvent(DWORD flags, int dx, int dy, int mouseData)
+void sendSpecialKeyEvent(DWORD flags, WORD key)
+{
+    INPUT ip;
+    ip.type = INPUT_KEYBOARD;
+    ip.ki.time = 0;
+    ip.ki.dwFlags = flags;
+    ip.ki.wScan = MapVirtualKey(key, MAPVK_VK_TO_VSC);
+    ip.ki.wVk = key;
+
+    ip.ki.dwExtraInfo = 0;
+    SendInput(1, &ip, sizeof(INPUT));
+}
+
+void sendMouseEvent(DWORD flags, LONG dx, LONG dy, DWORD mouseData)
 {
     INPUT input;
     input.type = INPUT_MOUSE;
     input.mi.mouseData = mouseData;
-    input.mi.dx = dx * (65536 / GetSystemMetrics(SM_CXSCREEN)); //x being coord in pixels
-    input.mi.dy =  dy * (65536 / GetSystemMetrics(SM_CYSCREEN)); //y being coord in pixels
-    input.mi.dwFlags = flags;//MOUSEEVENTF_MOVE;
+    input.mi.dx = dx;
+    input.mi.dy = dy;
+    input.mi.dwFlags = flags;
 
     SendInput(1, &input, sizeof(input));
 }
 
 void typeUnicodeChar(wchar_t c)
 {
-    sendKeyboardEvent(KEYEVENTF_UNICODE, c);
-    sendKeyboardEvent(KEYEVENTF_UNICODE | KEYEVENTF_KEYUP, c);
+    sendUnicodeEvent(KEYEVENTF_UNICODE, c);
+    sendUnicodeEvent(KEYEVENTF_UNICODE | KEYEVENTF_KEYUP, c);
 }
 
 void typeChar(wchar_t c) {
@@ -64,6 +76,8 @@ WORD getSpecialKey(char *keyName)
 {
     if( EQ("Return") )
         return VK_RETURN;
+    else if( EQ("BackSpace") )
+        return VK_BACK;
     else if( EQ("Ctrl") )
         return VK_CONTROL;
     else if( EQ("Esc") )
@@ -82,11 +96,11 @@ void keyTap(char *key) {
 }
 
 void keyDown(char *key) {
-    sendKeyboardEvent(KEYEVENTF_UNICODE, getSpecialKey(key));
+    sendSpecialKeyEvent(0, getSpecialKey(key));
 }
 
 void keyUp(char *key) {
-    sendKeyboardEvent(KEYEVENTF_UNICODE | KEYEVENTF_KEYUP, getSpecialKey(key));
+    sendSpecialKeyEvent(KEYEVENTF_KEYUP, getSpecialKey(key));
 }
 
 void mouseMove(int addX, int addY) {
@@ -123,5 +137,5 @@ void mouseUp(int button) {
 }
 
 void mouseScroll(int amount) {
-    sendMouseEvent(MOUSEEVENTF_WHEEL, 0, 0, amount);
+    sendMouseEvent(MOUSEEVENTF_WHEEL, 0, 0, amount*-100);
 }
