@@ -4,7 +4,7 @@
 // is included below.
 #define WINVER 0x0500
 #include <windows.h>
-#include <QDateTime>
+
 #include "fakeinput.h"
 
 namespace FakeInput {
@@ -35,8 +35,6 @@ void sendSpecialKeyEvent(DWORD flags, WORD key)
     SendInput(1, &ip, sizeof(INPUT));
 }
 
-
-
 void sendMouseEvent(DWORD flags, LONG dx, LONG dy, DWORD mouseData)
 {
     INPUT input;
@@ -50,30 +48,21 @@ void sendMouseEvent(DWORD flags, LONG dx, LONG dy, DWORD mouseData)
 }
 
 // SendInput() function doesn't repeat keys, here's a timer to simulate
-// the normal behavior in windows: keys repeat as you hold them down.
-WORD lastKeyDown = 0;
-qint64 lastKeyTime = 0;
+// the normal behavior in windows: keys repeating as you hold them down.
+WORD lastKeyDown = -1;
 bool lastKeyStillDown = false;
-class KeyRepeaterTimer : public QTimer {
-public:
-    void timeout(QPrivateSignal signal) {
-        if(lastKeyStillDown && QDateTime::currentMSecsSinceEpoch() - lastKeyTime > 500)
-            sendSpecialKeyEvent(0, lastKeyDown);
+DWORD lastKeyTime = 0;
+void CALLBACK keyRepeater(HWND hwnd, UINT uMsg, UINT timerId, DWORD dwTime) {
+    if(lastKeyStillDown && GetTickCount() - lastKeyTime > 500) {
+        sendSpecialKeyEvent(0, lastKeyDown);
     }
-};
-
-KeyRepeaterTimer *keyRepeater;
+}
 
 void initFakeInput() {
-    keyRepeater = new KeyRepeaterTimer();
-    keyRepeater->setSingleShot(false);
-    keyRepeater->setInterval(35);
-    keyRepeater->start();
+    SetTimer(NULL, 0, 35, (TIMERPROC) &keyRepeater);
 }
 
-void freeFakeInput() {
-    delete keyRepeater;
-}
+void freeFakeInput() {}
 
 void typeUnicodeChar(wchar_t c)
 {
@@ -91,10 +80,10 @@ void typeChar(wchar_t c) {
 }
 
 void typeString(wchar_t *string) {
-	int i = 0;
-	while(string[i] != '\0') {
-		typeChar(string[i++]);
-	}
+    int i = 0;
+    while(string[i] != '\0') {
+        typeChar(string[i++]);
+    }
 }
 
 #define EQ(K) ( strcmp(keyName, K) == 0 )
@@ -136,14 +125,12 @@ void keyTap(char *key) {
 void keyDown(char *key) {
     lastKeyDown = getSpecialKey(key);
     lastKeyStillDown = true;
-    lastKeyTime = QDateTime::currentMSecsSinceEpoch();
-
+    lastKeyTime = GetTickCount();
     sendSpecialKeyEvent(0, lastKeyDown);
 }
 
 void keyUp(char *key) {
     lastKeyStillDown = false;
-
     sendSpecialKeyEvent(KEYEVENTF_KEYUP, getSpecialKey(key));
 }
 
