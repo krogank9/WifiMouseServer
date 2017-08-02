@@ -7,12 +7,12 @@
 
 NetworkThread::NetworkThread()
 {
-    initFakeInput();
+    FakeInput::initFakeInput();
 }
 
 NetworkThread::~NetworkThread()
 {
-    freeFakeInput();
+    FakeInput::freeFakeInput();
 }
 
 void NetworkThread::run()
@@ -92,7 +92,7 @@ void specialKeyEvent(QString message)
         message.toWCharArray(str);
         char cstr[message.length() + 1];
         wcharToChar(str, cstr);
-        keyDown(cstr);
+        FakeInput::keyDown(cstr);
     }
     else if(message.startsWith("Up ")){
         message.remove("Up ");
@@ -100,7 +100,7 @@ void specialKeyEvent(QString message)
         message.toWCharArray(str);
         char cstr[message.length() + 1];
         wcharToChar(str, cstr);
-        keyUp(cstr);
+        FakeInput::keyUp(cstr);
     }
     else {
         message.remove("Tap ");
@@ -108,7 +108,7 @@ void specialKeyEvent(QString message)
         message.toWCharArray(str);
         char cstr[message.length() + 1];
         wcharToChar(str, cstr);
-        keyTap(cstr);
+        FakeInput::keyTap(cstr);
     }
 }
 
@@ -136,29 +136,29 @@ void NetworkThread::startInputLoop(QTcpSocket *socket)
                 QStringList coords = message.split(",");
                 int x = ((QString)coords.at(0)).toInt();
                 int y = ((QString)coords.at(1)).toInt();
-                mouseMove(x,y);
+                FakeInput::mouseMove(x,y);
             }
             else if(message.startsWith("MouseScroll ")) {
                 message.remove("MouseScroll ");
-                mouseScroll( message.toInt() );
+                FakeInput::mouseScroll( message.toInt() );
             } else if(message.startsWith("MouseDown ")) {
                 message.remove("MouseDown ");
-                mouseDown( message.toInt() );
+                FakeInput::mouseDown( message.toInt() );
             } else if(message.startsWith("MouseUp ")) {
                 message.remove("MouseUp ");
-                mouseUp( message.toInt() );
+                FakeInput::mouseUp( message.toInt() );
             } else if(message.startsWith("Backspace ")) {
                 message.remove("Backspace");
                 int n = abs( message.toInt() );
                 while(n-- > 0)
-                    keyTap("BackSpace");
+                    FakeInput::keyTap("BackSpace");
             } else if(message.startsWith("TypeString ")) {
                 message.remove(0, QString("TypeString ").length());
                 message.replace("\uFFFF","\n");
                 wchar_t str[message.length() + 1];
                 message.toWCharArray(str);
                 str[message.length()] = '\0';
-                typeString(str);
+                FakeInput::typeString(str);
             } else if(message.startsWith("SpecialKey ")) {
                 message.remove("SpecialKey ");
                 specialKeyEvent(message);
