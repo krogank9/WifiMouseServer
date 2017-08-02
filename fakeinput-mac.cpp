@@ -114,7 +114,6 @@ CGMouseButton getCGButton(int button) {
 }
 
 CGEventType getMouseEventType(int button, bool down) {
-    CGEventType cgType;
     if(button == 1)
         return down? kCGEventLeftMouseDown:kCGEventLeftMouseUp;
     else if(button == 2)
@@ -124,11 +123,11 @@ CGEventType getMouseEventType(int button, bool down) {
 }
 
 void mouseDown(int button) {
-    doMouseEvent(getMouseEventType(button, true), addX, addY, getCGButton(button));
+    doMouseEvent(getMouseEventType(button, true), 0, 0, getCGButton(button));
 }
 
 void mouseUp(int button) {
-    doMouseEvent(getMouseEventType(button, false), addX, addY, getCGButton(button));
+    doMouseEvent(getMouseEventType(button, false), 0, 0, getCGButton(button));
 }
 
 void mouseScroll(int amount) {
