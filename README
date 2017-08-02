@@ -6,4 +6,5 @@ http://wifi-mouse.xyz/
 Compile: qmake && make
 
 Dependencies
+Qt5,
 Linux: libxdo
