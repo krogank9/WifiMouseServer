@@ -7,6 +7,8 @@ extern "C" {
 
 //note: compile with: gcc main.cpp linux.cpp -lxdo
 
+namespace FakeInput {
+
 xdo_t *xdoInstance;
 
 void initFakeInput() {
@@ -89,4 +91,6 @@ void mouseScroll(int amount) {
         mouseUp(button);
         amount += incr;
     }
+}
+
 }

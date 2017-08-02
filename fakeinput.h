@@ -1,3 +1,5 @@
+namespace FakeInput {
+
 void initFakeInput();
 void freeFakeInput();
 void typeString(wchar_t *string);
@@ -8,3 +10,5 @@ void mouseMove(int addX, int addY);
 void mouseDown(int button);
 void mouseUp(int button);
 void mouseScroll(int amount);
+
+}

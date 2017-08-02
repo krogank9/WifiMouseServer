@@ -7,6 +7,8 @@
 
 #include "fakeinput.h"
 
+namespace FakeInput {
+
 void initFakeInput() {}
 
 void freeFakeInput() {}
@@ -138,4 +140,6 @@ void mouseUp(int button) {
 
 void mouseScroll(int amount) {
     sendMouseEvent(MOUSEEVENTF_WHEEL, 0, 0, amount*-100);
+}
+
 }

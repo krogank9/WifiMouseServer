@@ -4,6 +4,8 @@
 
 //note: compile with: gcc -framework ApplicationServices
 
+namespace FakeInput {
+
 void initFakeInput() {
 }
 
@@ -133,4 +135,6 @@ void mouseScroll(int amount) {
     CGEventRef scroll = CGEventCreateScrollWheelEvent(NULL, kCGScrollEventUnitLine, 1, amount);
     CGEventPost(kCGHIDEventTap, scroll);
     CFRelease(scroll);
+}
+
 }
