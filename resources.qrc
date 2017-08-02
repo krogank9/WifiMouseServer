@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/logo.svg</file>
+        <file>images/icon64.png</file>
+        <file>images/listening3.svg</file>
+        <file>images/listening2.svg</file>
+        <file>images/listening1.svg</file>
+        <file>images/connected.svg</file>
+    </qresource>
+</RCC>
