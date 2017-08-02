@@ -1,4 +1,5 @@
 #include <ApplicationServices/ApplicationServices.h>
+#include <Carbon/Carbon.h>
 #include "fakeinput.h"
 
 //note: compile with: gcc -framework ApplicationServices
