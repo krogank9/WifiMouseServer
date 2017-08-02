@@ -46,14 +46,19 @@ void NetworkThread::run()
    }
 }
 
+QString NetworkThread::getPassword()
+{
+    QString password;
+    QMetaObject::invokeMethod( mainWindow, "getPassword", Qt::BlockingQueuedConnection, Q_RETURN_ARG(QString, password));
+    return password;
+}
+
 bool NetworkThread::verifyClient(QTcpSocket *socket)
 {
     if( !socket->waitForReadyRead(2000) )
         return false;
 
-    QString password;
-    QMetaObject::invokeMethod( mainWindow, "getPassword", Qt::BlockingQueuedConnection, Q_RETURN_ARG(QString, password));
-    QString desiredResponse("cow.emoji.WifiMouseClient "+password+"\n");
+    QString desiredResponse("cow.emoji.WifiMouseClient "+getPassword()+"\n");
     QString clientResponse( socket->readLine() );
 
     if(clientResponse == desiredResponse) {
@@ -109,6 +114,7 @@ void specialKeyEvent(QString message)
 
 void NetworkThread::startInputLoop(QTcpSocket *socket)
 {
+    QString startPassword = getPassword();
     while(true) {
         if(!socket->waitForReadyRead(2000)) {
             qInfo() << "Read timed out...\n";
@@ -120,6 +126,8 @@ void NetworkThread::startInputLoop(QTcpSocket *socket)
             message = message.left(message.length() - 1); // remove \n at end of each line
 
             if(message == "PING") {
+                if(getPassword() != startPassword)
+                    return;
                 socket->write("PING");
                 socket->waitForBytesWritten();
             }

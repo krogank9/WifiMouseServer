@@ -8,28 +8,48 @@
 
 #include "fakeinput.h"
 
-void initFakeInput() {
+void initFakeInput() {}
+
+void freeFakeInput() {}
+
+void sendKeyboardEvent(DWORD flags, WORD scan)
+{
+    INPUT ip;
+    ip.type = INPUT_KEYBOARD;
+    ip.ki.time = 0;
+    ip.ki.dwFlags = flags;
+    ip.ki.wScan = scan;
+    ip.ki.wVk = 0;
+
+    ip.ki.dwExtraInfo = 0;
+    SendInput(1, &ip, sizeof(INPUT));
 }
 
-void freeFakeInput() {
+void sendMouseEvent(DWORD flags, int dx, int dy, int mouseData)
+{
+    INPUT input;
+    input.type = INPUT_MOUSE;
+    input.mi.mouseData = mouseData;
+    input.mi.dx = dx * (65536 / GetSystemMetrics(SM_CXSCREEN)); //x being coord in pixels
+    input.mi.dy =  dy * (65536 / GetSystemMetrics(SM_CYSCREEN)); //y being coord in pixels
+    input.mi.dwFlags = flags;//MOUSEEVENTF_MOVE;
+
+    SendInput(1, &input, sizeof(input));
+}
+
+void typeUnicodeChar(wchar_t c)
+{
+    sendKeyboardEvent(KEYEVENTF_UNICODE, c);
+    sendKeyboardEvent(KEYEVENTF_UNICODE | KEYEVENTF_KEYUP, c);
 }
 
 void typeChar(wchar_t c) {
-	// Create a keyboard event structure
-	INPUT ip;
-	ip.type = INPUT_KEYBOARD;
-	ip.ki.time = 0;
-	ip.ki.dwExtraInfo = 0;
-
-	// Press a unicode "key"
-	ip.ki.dwFlags = KEYEVENTF_UNICODE;
-	ip.ki.wVk = 0;
-	ip.ki.wScan = c;
-	SendInput(1, &ip, sizeof(INPUT));
-
-	// Release key
-	ip.ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
-	SendInput(1, &ip, sizeof(INPUT));
+    if(c == '\n') {
+        keyTap("Return");
+    }
+    else {
+        typeUnicodeChar(c);
+    }
 }
 
 void typeString(wchar_t *string) {
@@ -39,26 +59,69 @@ void typeString(wchar_t *string) {
 	}
 }
 
+#define EQ(K) ( strcmp(keyName, K) == 0 )
+WORD getSpecialKey(char *keyName)
+{
+    if( EQ("Return") )
+        return VK_RETURN;
+    else if( EQ("Ctrl") )
+        return VK_CONTROL;
+    else if( EQ("Esc") )
+        return VK_ESCAPE;
+    else if( EQ("VolumeUp") )
+        return VK_VOLUME_UP;
+    else if( EQ("VolumeDown") )
+        return VK_VOLUME_DOWN;
+    else
+        return 0;
+}
+
 void keyTap(char *key) {
-	xdo_send_keysequence_window(xdoInstance, CURRENTWINDOW, string, 12000);
+    keyDown(key);
+    keyUp(key);
 }
 
 void keyDown(char *key) {
-	xdo_send_keysequence_window_down(xdoInstance, CURRENTWINDOW, key, 12000);
+    sendKeyboardEvent(KEYEVENTF_UNICODE, getSpecialKey(key));
 }
 
 void keyUp(char *key) {
-	xdo_send_keysequence_window_up(xdoInstance, CURRENTWINDOW, key, 12000);
+    sendKeyboardEvent(KEYEVENTF_UNICODE | KEYEVENTF_KEYUP, getSpecialKey(key));
 }
 
 void mouseMove(int addX, int addY) {
-	xdo_move_mouse_relative(xdoInstance, addX, addY);
+    sendMouseEvent(MOUSEEVENTF_MOVE, addX, addY, 0);
+}
+
+DWORD buttonToFlags(int button, bool down) {
+    if(button == 1) {
+        if(down)
+            return MOUSEEVENTF_LEFTDOWN;
+        else
+            return MOUSEEVENTF_LEFTUP;
+    }
+    else if(button == 2) {
+        if(down)
+            return MOUSEEVENTF_MIDDLEDOWN;
+        else
+            return MOUSEEVENTF_MIDDLEUP;
+    }
+    else {//if(button == 3) {
+        if(down)
+            return MOUSEEVENTF_RIGHTDOWN;
+        else
+            return MOUSEEVENTF_RIGHTUP;
+    }
 }
 
 void mouseDown(int button) {
-	xdo_mouse_down(xdoInstance, CURRENTWINDOW, button);
+    sendMouseEvent(buttonToFlags(button, true), 0, 0, 0);
 }
 
 void mouseUp(int button) {
-	xdo_mouse_up(xdoInstance, CURRENTWINDOW, button);
+    sendMouseEvent(buttonToFlags(button, false), 0, 0, 0);
+}
+
+void mouseScroll(int amount) {
+    sendMouseEvent(MOUSEEVENTF_WHEEL, 0, 0, amount);
 }

@@ -21,7 +21,7 @@ MainWindow::MainWindow(QWidget *parent) :
     this->setFixedSize(this->geometry().width(),this->geometry().height());
     this->setWindowFlags(Qt::Dialog | Qt::WindowTitleHint);
 
-    rotatingSquare = new RotatingSquare(0, 0, 0, this->width()/7, 35, 35, 20);
+    rotatingSquare = new RotatingSquare(0, 0, 0, this->width()/7, 35, 35, 35);
     loadSvgs();
     startSvgAnimation();
 
@@ -127,6 +127,8 @@ void MainWindow::updateListeningAnimation()
         statusWidget->setRenderer(listening1Svg);
 
     statusWidget->repaint();
+
+    updateServerIp();
 }
 
 void MainWindow::updateLogoAnimation()

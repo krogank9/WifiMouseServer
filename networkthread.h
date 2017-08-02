@@ -16,6 +16,7 @@ public:
     void run();
     MainWindow *mainWindow;
 private:
+    QString getPassword();
     bool verifyClient(QTcpSocket *socket);
     void startInputLoop(QTcpSocket *socket);
     void updateClientIp(QString ip);
