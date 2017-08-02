@@ -82,12 +82,24 @@ WORD getSpecialKey(char *keyName)
         return VK_BACK;
     else if( EQ("Ctrl") )
         return VK_CONTROL;
+    else if( EQ("Tab") )
+        return VK_TAB;
+    else if( EQ("Alt") )
+        return VK_MENU;
     else if( EQ("Esc") )
         return VK_ESCAPE;
     else if( EQ("VolumeUp") )
         return VK_VOLUME_UP;
     else if( EQ("VolumeDown") )
         return VK_VOLUME_DOWN;
+    else if( EQ("Left") )
+        return VK_LEFT;
+    else if( EQ("Right") )
+        return VK_RIGHT;
+    else if( EQ("Up") )
+        return VK_UP;
+    else if( EQ("Down") )
+        return VK_DOWN;
     else
         return 0;
 }
