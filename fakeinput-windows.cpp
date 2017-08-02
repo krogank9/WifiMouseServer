@@ -9,10 +9,6 @@
 
 namespace FakeInput {
 
-void initFakeInput() {}
-
-void freeFakeInput() {}
-
 void sendUnicodeEvent(DWORD flags, WORD scan)
 {
     INPUT ip;
@@ -50,6 +46,23 @@ void sendMouseEvent(DWORD flags, LONG dx, LONG dy, DWORD mouseData)
 
     SendInput(1, &input, sizeof(input));
 }
+
+// SendInput() function doesn't repeat keys, here's a timer to simulate
+// the normal behavior in windows: keys repeat as you hold them down.
+WORD lastKeyDown = -1;
+bool lastKeyStillDown = false;
+DWORD lastKeyTime = 0;
+void CALLBACK keyRepeater(HWND hwnd, UINT uMsg, UINT timerId, DWORD dwTime) {
+    if(lastKeyStillDown && GetTickCount() - lastKeyTime > 500) {
+        sendSpecialKeyEvent(0, lastKeyDown);
+    }
+}
+
+void initFakeInput() {
+    SetTimer(NULL, 0, 35, (TIMERPROC) &keyRepeater);
+}
+
+void freeFakeInput() {}
 
 void typeUnicodeChar(wchar_t c)
 {
@@ -110,10 +123,14 @@ void keyTap(char *key) {
 }
 
 void keyDown(char *key) {
-    sendSpecialKeyEvent(0, getSpecialKey(key));
+    lastKeyDown = getSpecialKey(key);
+    lastKeyStillDown = true;
+    lastKeyTime = GetTickCount();
+    sendSpecialKeyEvent(0, lastKeyDown);
 }
 
 void keyUp(char *key) {
+    lastKeyStillDown = false;
     sendSpecialKeyEvent(KEYEVENTF_KEYUP, getSpecialKey(key));
 }
 
@@ -153,5 +170,6 @@ void mouseUp(int button) {
 void mouseScroll(int amount) {
     sendMouseEvent(MOUSEEVENTF_WHEEL, 0, 0, amount*-100);
 }
+
 
 }
