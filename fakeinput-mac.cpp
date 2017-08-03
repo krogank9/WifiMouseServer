@@ -62,28 +62,22 @@ CGKeyCode lastKeyDown = 0;
 qint64 lastKeyTime = 0;
 bool lastKeyStillDown = false;
 
-class KeyRepeaterCallback : public QObject {
-public Q_SLOTS:
-    void callback() {
-        if(lastKeyStillDown && QDateTime::currentMSecsSinceEpoch() - lastKeyTime > 500)
-            sendSpecialKeyEvent(0, lastKeyDown);
-    }
-};
+void keyRepeatCallback() {
+    if(lastKeyStillDown && QDateTime::currentMSecsSinceEpoch() - lastKeyTime > 500)
+       sendSpecialKeyEvent(0, lastKeyDown);
+}
 
-KeyRepeaterCallback *keyRepeaterCallback;
-Timer *keyRepeaterTimer;
+QTimer *keyRepeaterTimer;
 void initFakeInput() {
-    keyRepeaterCallback = new KeyRepeaterCallback();
-    keyRepeaterTimer = new Timer();
+    keyRepeaterTimer = new QTimer();
     keyRepeaterTimer->setSingleShot(false);
     keyRepeaterTimer->setInterval(35);
     keyRepeaterTimer->start();
-    connect(keyRepeaterTimer, SIGNAL(timeout()), keyRepeaterCallback, SLOT(callback()));
+    QObject::connect(keyRepeaterTimer, QTimer::timeout, keyRepeatCallback);
 }
 
 void freeFakeInput() {
     delete keyRepeaterTimer;
-    delete keyRepeaterCallback
 }
 
 void typeChar(wchar_t c) {

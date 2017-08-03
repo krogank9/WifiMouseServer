@@ -5,6 +5,9 @@
 #define WINVER 0x0500
 #include <windows.h>
 
+#include <QDateTime>
+#include <QTimer>
+
 #include "fakeinput.h"
 
 namespace FakeInput {
@@ -50,19 +53,26 @@ void sendMouseEvent(DWORD flags, LONG dx, LONG dy, DWORD mouseData)
 // SendInput() function doesn't repeat keys, here's a timer to simulate
 // the normal behavior in windows: keys repeating as you hold them down.
 WORD lastKeyDown = -1;
+qint64 lastKeyTime = 0;
 bool lastKeyStillDown = false;
-DWORD lastKeyTime = 0;
-void CALLBACK keyRepeater(HWND hwnd, UINT uMsg, UINT timerId, DWORD dwTime) {
-    if(lastKeyStillDown && GetTickCount() - lastKeyTime > 500) {
-        sendSpecialKeyEvent(0, lastKeyDown);
-    }
+
+void keyRepeatCallback() {
+    if(lastKeyStillDown && QDateTime::currentMSecsSinceEpoch() - lastKeyTime > 500)
+       sendSpecialKeyEvent(0, lastKeyDown);
 }
 
+QTimer *keyRepeaterTimer;
 void initFakeInput() {
-    SetTimer(NULL, 0, 35, (TIMERPROC) &keyRepeater);
+    keyRepeaterTimer = new QTimer();
+    keyRepeaterTimer->setSingleShot(false);
+    keyRepeaterTimer->setInterval(35);
+    keyRepeaterTimer->start();
+    QObject::connect(keyRepeaterTimer, QTimer::timeout, keyRepeatCallback);
 }
 
-void freeFakeInput() {}
+void freeFakeInput() {
+    delete keyRepeaterTimer;
+}
 
 void typeUnicodeChar(wchar_t c)
 {
@@ -125,7 +135,7 @@ void keyTap(char *key) {
 void keyDown(char *key) {
     lastKeyDown = getSpecialKey(key);
     lastKeyStillDown = true;
-    lastKeyTime = GetTickCount();
+    lastKeyTime = QDateTime::currentMSecsSinceEpoch();
     sendSpecialKeyEvent(0, lastKeyDown);
 }
 
