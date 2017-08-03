@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
     if( !guard.tryToRun() ) {
         QSystemTrayIcon dummy;
         dummy.show();
-        dummy.showMessage("WifiMouse Server", "Already running");
+        dummy.showMessage("WifiMouseServer", "Already running");
         dummy.hide();
         return 0;
     }

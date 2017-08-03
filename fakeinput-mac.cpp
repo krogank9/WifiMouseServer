@@ -1,16 +1,13 @@
 #include <ApplicationServices/ApplicationServices.h>
 #include <Carbon/Carbon.h>
+#include <QTimer>
+#include <QDateTime>
+
 #include "fakeinput.h"
 
 //note: compile with: gcc -framework ApplicationServices
 
 namespace FakeInput {
-
-void initFakeInput() {
-}
-
-void freeFakeInput() {
-}
 
 void doMouseEvent(CGEventType type, int addX, int addY, CGMouseButton button) {
     CGEventRef getPos = CGEventCreate(NULL);
@@ -42,20 +39,47 @@ void doKeyboardEvent(CGKeyCode key, bool down) {
 }
 
 void typeUniChar(wchar_t c) {
-	CGEventSourceRef src = CGEventSourceCreate(kCGEventSourceStateHIDSystemState);
-	CGEventRef down_evt = CGEventCreateKeyboardEvent(src, (CGKeyCode) 0, true);
-	CGEventRef up_evt = CGEventCreateKeyboardEvent(src, (CGKeyCode) 0, false);
+    CGEventSourceRef src = CGEventSourceCreate(kCGEventSourceStateHIDSystemState);
+    CGEventRef down_evt = CGEventCreateKeyboardEvent(src, (CGKeyCode) 0, true);
+    CGEventRef up_evt = CGEventCreateKeyboardEvent(src, (CGKeyCode) 0, false);
 
-	UniChar str[] = {(UniChar)c, '\0'};
-	CGEventKeyboardSetUnicodeString(down_evt, 1, str);
-	CGEventKeyboardSetUnicodeString(up_evt, 1, str);
+    UniChar str[] = {(UniChar)c, '\0'};
+    CGEventKeyboardSetUnicodeString(down_evt, 1, str);
+    CGEventKeyboardSetUnicodeString(up_evt, 1, str);
 
-	CGEventPost (kCGHIDEventTap, down_evt);
-	CGEventPost (kCGHIDEventTap, up_evt);
+    CGEventPost (kCGHIDEventTap, down_evt);
+    CGEventPost (kCGHIDEventTap, up_evt);
 
     CFRelease (down_evt);
     CFRelease (up_evt);
     CFRelease (src);
+}
+
+// As on Windows, CGEventCreateKeyboardEvent() does not simulate
+// the normal behavior in mac: keys repeat as you hold them down.
+// Timer called every 35ms to simulate this behavior:
+CGKeyCode lastKeyDown = 0;
+qint64 lastKeyTime = 0;
+bool lastKeyStillDown = false;
+
+class KeyRepeaterTimer : public QTimer {
+public:
+    void timeout(QPrivateSignal signal) {
+        if(lastKeyStillDown && QDateTime::currentMSecsSinceEpoch() - lastKeyTime > 500)
+            sendSpecialKeyEvent(0, lastKeyDown);
+    }
+};
+
+KeyRepeaterTimer *keyRepeater;
+void initFakeInput() {
+    keyRepeater = new KeyRepeaterTimer();
+    keyRepeater->setSingleShot(false);
+    keyRepeater->setInterval(35);
+    keyRepeater->start();
+}
+
+void freeFakeInput() {
+    delete keyRepeater;
 }
 
 void typeChar(wchar_t c) {
@@ -107,10 +131,16 @@ void keyTap(char *key) {
 }
 
 void keyDown(char *key) {
-    doKeyboardEvent(getSpecialKey(key), true);
+    lastKeyDown = getSpecialKey(key);
+    lastKeyStillDown = true;
+    lastKeyTime = QDateTime::currentMSecsSinceEpoch();
+
+    doKeyboardEvent(lastKeyDown, true);
 }
 
 void keyUp(char *key) {
+    lastKeyStillDown = false;
+
     doKeyboardEvent(getSpecialKey(key), false);
 }
 

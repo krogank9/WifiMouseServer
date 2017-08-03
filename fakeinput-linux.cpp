@@ -23,19 +23,21 @@ void typeChar(wchar_t c) {
     if(c == '\n') {
         keyTap("Return");
 	}
-	else if(c >= 0x00A0) { // 0x00A0 is the end of ASCII characters
-		char unicodeCharNumber[5];
-		sprintf(unicodeCharNumber, "U%04X", c);
+    else if(c >= 0x00A0) { // 0x00A0 is the end of ASCII characters
+        char unicodeCharNumber[10];
+        sprintf(unicodeCharNumber, "U%04X", c);
 		// Note: this starts glitching out if you set the pause too short.
 		// Maybe because for unicode characters, the keys must be remapped.
-		// 110ms seems to be sufficient.
-		xdo_send_keysequence_window(xdoInstance, CURRENTWINDOW, unicodeCharNumber, 110000);
+        // 95ms seems to be sufficient.
+        xdo_send_keysequence_window(xdoInstance, CURRENTWINDOW, unicodeCharNumber, 95000);
 	}
 	else {
 		char str[] = {c, '\0'};
 		xdo_enter_text_window(xdoInstance, CURRENTWINDOW, str, 12000);
 	}
 }
+
+
 
 void typeString(wchar_t *string) {
 	int i = 0;
