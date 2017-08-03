@@ -2,7 +2,6 @@
 #include <Carbon/Carbon.h>
 #include <QTimer>
 #include <QDateTime>
-#include <QDebug>
 
 #include "fakeinput.h"
 
@@ -64,8 +63,6 @@ qint64 lastKeyTime = 0;
 bool lastKeyStillDown = false;
 
 void keyRepeatCallback() {
-    static int i = 1;
-    qInfo() << "Test " << i++ << "\n";
     if(lastKeyStillDown && QDateTime::currentMSecsSinceEpoch() - lastKeyTime > 500)
        doKeyboardEvent(lastKeyDown, true);
 }
