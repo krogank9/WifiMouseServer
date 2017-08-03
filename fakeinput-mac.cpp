@@ -79,6 +79,8 @@ CGKeyCode getSpecialKey(char *keyName)
         return kVK_Return;
     else if( EQ("Ctrl") )
         return kVK_Control;
+    else if( EQ("Tab") )
+        return kVK_Tab;
     else if( EQ("BackSpace") )
         return kVK_Delete;
     else if( EQ("Esc") )
@@ -96,10 +98,11 @@ CGKeyCode getSpecialKey(char *keyName)
     else if( EQ("Down") )
         return kVK_DownArrow;
     else
-        return (CGKeyCode)0;
+        return (CGKeyCode)-1;
 }
 
 void keyTap(char *key) {
+    keyDown(key);
     keyUp(key);
 }
 
