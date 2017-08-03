@@ -67,7 +67,7 @@ void initFakeInput() {
     keyRepeaterTimer->setSingleShot(false);
     keyRepeaterTimer->setInterval(35);
     keyRepeaterTimer->start();
-    QObject::connect(keyRepeaterTimer, QTimer::timeout, keyRepeatCallback);
+    QObject::connect(keyRepeaterTimer, &QTimer::timeout, keyRepeatCallback);
 }
 
 void freeFakeInput() {
@@ -181,5 +181,21 @@ void mouseScroll(int amount) {
     sendMouseEvent(MOUSEEVENTF_WHEEL, 0, 0, amount*-100);
 }
 
+bool zooming = false;
+
+void stopZoom() {
+    if(!zooming)
+        return;
+    keyUp("Ctrl");
+    zooming = false;
+}
+
+void zoom(int amount) {
+    if(!zooming) {
+        zooming = true;
+        keyDown("Ctrl");
+    }
+    mouseScroll(amount);
+}
 
 }
