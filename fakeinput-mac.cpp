@@ -20,6 +20,15 @@ void doMouseEvent(CGEventType type, int addX, int addY, CGMouseButton button) {
     int curY = cursor.y;
 
     CGPoint absPos = CGPointMake(curX + addX, curY + addY);
+    if(absPos.x < 0) absPos.x = 0;
+    if(absPos.y < 0) absPos.y = 0;
+    // Todo: support multiple monitors if this doesn't.
+    // Will fix when i have a usable VM. fuck.
+    CGRect mainMonitor = CGDisplayBounds(CGMainDisplayID());
+    CGFloat monitorHeight = CGRectGetHeight(mainMonitor);
+    CGFloat monitorWidth = CGRectGetWidth(mainMonitor);
+    if(absPos.x > monitorWidth) absPos.x = monitorWidth;
+    if(absPos.y > monitorHeight) absPos.y = monitorHeight;
 
     CGEventRef event = CGEventCreateMouseEvent(NULL, type, absPos, button);
     CGEventPost(kCGHIDEventTap, event);
@@ -27,18 +36,13 @@ void doMouseEvent(CGEventType type, int addX, int addY, CGMouseButton button) {
 }
 
 void doKeyboardEvent(CGKeyCode key, bool down) {
-    CGEventSourceRef src = CGEventSourceCreate(kCGEventSourceStateHIDSystemState);
-
-    CGEventRef event= CGEventCreateKeyboardEvent(src, key, down);
-    CGEventPost (kCGHIDEventTap, event);
-
-    CFRelease (event);
-    CFRelease (src);
+    CGEventRef event = CGEventCreateKeyboardEvent(NULL, key, down);
+    CGEventPost(kCGHIDEventTap, event);
+    CFRelease(event);
 }
 
 void typeUniChar(wchar_t c) {
 	CGEventSourceRef src = CGEventSourceCreate(kCGEventSourceStateHIDSystemState);
-
 	CGEventRef down_evt = CGEventCreateKeyboardEvent(src, (CGKeyCode) 0, true);
 	CGEventRef up_evt = CGEventCreateKeyboardEvent(src, (CGKeyCode) 0, false);
 
@@ -47,7 +51,6 @@ void typeUniChar(wchar_t c) {
 	CGEventKeyboardSetUnicodeString(up_evt, 1, str);
 
 	CGEventPost (kCGHIDEventTap, down_evt);
-	usleep(60);
 	CGEventPost (kCGHIDEventTap, up_evt);
 
     CFRelease (down_evt);
@@ -76,19 +79,27 @@ CGKeyCode getSpecialKey(char *keyName)
         return kVK_Return;
     else if( EQ("Ctrl") )
         return kVK_Control;
+    else if( EQ("BackSpace") )
+        return kVK_Delete;
     else if( EQ("Esc") )
         return kVK_Escape;
     else if( EQ("VolumeUp") )
         return kVK_VolumeUp;
     else if( EQ("VolumeDown") )
         return kVK_VolumeDown;
+    else if( EQ("Left") )
+        return kVK_LeftArrow;
+    else if( EQ("Right") )
+        return kVK_RightArrow;
+    else if( EQ("Up") )
+        return kVK_UpArrow;
+    else if( EQ("Down") )
+        return kVK_DownArrow;
     else
         return (CGKeyCode)0;
 }
 
 void keyTap(char *key) {
-    keyDown(key);
-    usleep(60);//i forget if this is needed on mac
     keyUp(key);
 }
 
@@ -97,11 +108,17 @@ void keyDown(char *key) {
 }
 
 void keyUp(char *key) {
-    doKeyboardEvent(getSpecialKey(key), true);
+    doKeyboardEvent(getSpecialKey(key), false);
 }
 
+// need to keep track of buttons on mac for drag events.
+bool buttonDown[] = {false, false, false};
 void mouseMove(int addX, int addY) {
-    doMouseEvent(kCGEventMouseMoved, addX, addY, 0);
+    CGEventType moveType = kCGEventMouseMoved;
+    if(buttonDown[0]) moveType = kCGEventLeftMouseDragged;
+    if(buttonDown[1]) moveType = kCGEventOtherMouseDragged;
+    if(buttonDown[2]) moveType = kCGEventRightMouseDragged;
+    doMouseEvent(moveType, addX, addY, (CGMouseButton)0);
 }
 
 CGMouseButton getCGButton(int button) {
@@ -123,17 +140,22 @@ CGEventType getMouseEventType(int button, bool down) {
 }
 
 void mouseDown(int button) {
+    if(button >= 0 && button <= 3)
+        buttonDown[button-1] = true;
     doMouseEvent(getMouseEventType(button, true), 0, 0, getCGButton(button));
 }
 
 void mouseUp(int button) {
+    if(button >= 0 && button <= 3)
+        buttonDown[button-1] = false;
     doMouseEvent(getMouseEventType(button, false), 0, 0, getCGButton(button));
 }
 
 void mouseScroll(int amount) {
-    CGEventRef scroll = CGEventCreateScrollWheelEvent(NULL, kCGScrollEventUnitLine, 1, amount);
+    CGEventRef scroll = CGEventCreateScrollWheelEvent(NULL, kCGScrollEventUnitLine, 1, -amount);
     CGEventPost(kCGHIDEventTap, scroll);
     CFRelease(scroll);
 }
 
+//end of namespace
 }
