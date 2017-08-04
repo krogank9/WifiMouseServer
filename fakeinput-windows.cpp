@@ -7,6 +7,7 @@
 
 #include <QDateTime>
 #include <QTimer>
+#include <QDebug>
 
 #include "fakeinput.h"
 
@@ -74,72 +75,74 @@ void freeFakeInput() {
     delete keyRepeaterTimer;
 }
 
-void typeUnicodeChar(wchar_t c)
+void typeUnicodeChar(ushort c)
 {
     sendUnicodeEvent(KEYEVENTF_UNICODE, c);
     sendUnicodeEvent(KEYEVENTF_UNICODE | KEYEVENTF_KEYUP, c);
 }
 
-void typeChar(wchar_t c) {
+void typeChar(QChar c) {
     if(c == '\n') {
         keyTap("Return");
     }
     else {
-        typeUnicodeChar(c);
+        QString hex;
+        hex.setNum(c.unicode(), 16);
+        qInfo() << "char: " << hex << "\n";
+        typeUnicodeChar(c.unicode());
     }
 }
 
-void typeString(wchar_t *string) {
+void typeString(QString string) {
     int i = 0;
-    while(string[i] != '\0') {
+    while(i < string.length()) {
         typeChar(string[i++]);
     }
 }
 
-#define EQ(K) ( strcmp(keyName, K) == 0 )
-WORD getSpecialKey(char *keyName)
+WORD getSpecialKey(QString keyName)
 {
-    if( EQ("Return") )
+    if( keyName == "Return" )
         return VK_RETURN;
-    else if( EQ("BackSpace") )
+    else if( keyName == "BackSpace" )
         return VK_BACK;
-    else if( EQ("Ctrl") )
+    else if( keyName == "Ctrl" )
         return VK_CONTROL;
-    else if( EQ("Tab") )
+    else if( keyName == "Tab" )
         return VK_TAB;
-    else if( EQ("Alt") )
+    else if( keyName == "Alt" )
         return VK_MENU;
-    else if( EQ("Esc") )
+    else if( keyName == "Esc" )
         return VK_ESCAPE;
-    else if( EQ("VolumeUp") )
+    else if( keyName == "VolumeUp" )
         return VK_VOLUME_UP;
-    else if( EQ("VolumeDown") )
+    else if( keyName == "VolumeDown" )
         return VK_VOLUME_DOWN;
-    else if( EQ("Left") )
+    else if( keyName == "Left" )
         return VK_LEFT;
-    else if( EQ("Right") )
+    else if( keyName == "Right" )
         return VK_RIGHT;
-    else if( EQ("Up") )
+    else if( keyName == "Up" )
         return VK_UP;
-    else if( EQ("Down") )
+    else if( keyName == "Down" )
         return VK_DOWN;
     else
         return 0;
 }
 
-void keyTap(char *key) {
+void keyTap(QString key) {
     keyDown(key);
     keyUp(key);
 }
 
-void keyDown(char *key) {
+void keyDown(QString key) {
     lastKeyDown = getSpecialKey(key);
     lastKeyStillDown = true;
     lastKeyTime = QDateTime::currentMSecsSinceEpoch();
     sendSpecialKeyEvent(0, lastKeyDown);
 }
 
-void keyUp(char *key) {
+void keyUp(QString key) {
     lastKeyStillDown = false;
     sendSpecialKeyEvent(KEYEVENTF_KEYUP, getSpecialKey(key));
 }
@@ -161,7 +164,7 @@ DWORD buttonToFlags(int button, bool down) {
         else
             return MOUSEEVENTF_MIDDLEUP;
     }
-    else {//if(button == 3) {
+    else {//if button == 3
         if(down)
             return MOUSEEVENTF_RIGHTDOWN;
         else
@@ -182,6 +185,7 @@ void mouseScroll(int amount) {
 }
 
 bool zooming = false;
+int totalZoom = 0;
 
 void stopZoom() {
     if(!zooming)
@@ -195,7 +199,7 @@ void zoom(int amount) {
         zooming = true;
         keyDown("Ctrl");
     }
-    mouseScroll(amount);
+    mouseScroll(-amount);
 }
 
 }
