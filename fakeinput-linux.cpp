@@ -3,8 +3,6 @@
 extern "C" {
 	#include <xdo.h>
 }
-#include <stdio.h>
-#include <cstring>
 #include "fakeinput.h"
 
 //note: compile with: gcc main.cpp linux.cpp -lxdo
@@ -22,19 +20,21 @@ void freeFakeInput() {
 	xdo_free(xdoInstance);
 }
 
-void typeChar(wchar_t c) {
+void typeChar(ushort c) {
     if(c == '\n') {
         keyTap("Return");
 	}
     else if(c >= 0x00A0) { // 0x00A0 is the end of ASCII characters
         QString unicodeHex;
         unicodeHex.setNum(c, 16);
-        unicodeHex = "U"+unicodeHex.toUpper();
+        unicodeHex = "U"+unicodeHex;
+
+        qInfo() << "unicodeHex: " << unicodeHex << "\n";
 
 		// Note: this starts glitching out if you set the pause too short.
 		// Maybe because for unicode characters, the keys must be remapped.
         // 95ms seems to be sufficient.
-        xdo_send_keysequence_window(xdoInstance, CURRENTWINDOW, unicodeHex.toLocal8Bit().data(), 95000);
+        xdo_send_keysequence_window(xdoInstance, CURRENTWINDOW, unicodeHex.toLatin1().data(), 95000);
 	}
     else {
 		char str[] = {c, '\0'};
@@ -42,40 +42,37 @@ void typeChar(wchar_t c) {
     }
 }
 
-
-
-void typeString(wchar_t *string) {
+void typeString(QString string) {
 	int i = 0;
-	while(string[i] != '\0') {
-		typeChar(string[i++]);
+    while(i < string.length()) {
+        typeChar( string.at(i++).unicode() );
 	}
 }
 
-#define EQ(K) ( strcmp(keyName, K) == 0 )
-const char *getSpecialKey(char *keyName)
+QString getSpecialKey(QString keyName)
 {
-    if( EQ("Ctrl") )
+    if( keyName == "Ctrl" )
         return "Control";
-    else if( EQ("Esc") )
+    else if( keyName == "Esc" )
         return "Escape";
-    else if( EQ("VolumeUp") )
+    else if( keyName == "VolumeUp" )
         return "XF86AudioRaiseVolume";
-    else if( EQ("VolumeDown") )
+    else if( keyName == "VolumeDown" )
         return "XF86AudioLowerVolume";
     else
         return keyName;
 }
 
-void keyTap(char *key) {
-    xdo_send_keysequence_window(xdoInstance, CURRENTWINDOW, getSpecialKey(key), 12000);
+void keyTap(QString key) {
+    xdo_send_keysequence_window(xdoInstance, CURRENTWINDOW, getSpecialKey(key).toLocal8Bit(), 12000);
 }
 
-void keyDown(char *key) {
-    xdo_send_keysequence_window_down(xdoInstance, CURRENTWINDOW, getSpecialKey(key), 12000);
+void keyDown(QString key) {
+    xdo_send_keysequence_window_down(xdoInstance, CURRENTWINDOW, getSpecialKey(key).toLocal8Bit(), 12000);
 }
 
-void keyUp(char *key) {
-    xdo_send_keysequence_window_up(xdoInstance, CURRENTWINDOW, getSpecialKey(key), 12000);
+void keyUp(QString key) {
+    xdo_send_keysequence_window_up(xdoInstance, CURRENTWINDOW, getSpecialKey(key).toLocal8Bit(), 12000);
 }
 
 void mouseMove(int addX, int addY) {

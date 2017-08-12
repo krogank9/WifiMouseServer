@@ -146,27 +146,15 @@ void specialKeyEvent(QString message)
 {
     if(message.startsWith("Down ")) {
         message.remove("Down ");
-        wchar_t str[message.length() + 1]; str[message.length()] = '\0';
-        message.toWCharArray(str);
-        char cstr[message.length() + 1];
-        wcharToChar(str, cstr);
-        FakeInput::keyDown(cstr);
+        FakeInput::keyUp(message);
     }
     else if(message.startsWith("Up ")){
         message.remove("Up ");
-        wchar_t str[message.length() + 1]; str[message.length()] = '\0';
-        message.toWCharArray(str);
-        char cstr[message.length() + 1];
-        wcharToChar(str, cstr);
-        FakeInput::keyUp(cstr);
+        FakeInput::keyUp(message);
     }
     else {
         message.remove("Tap ");
-        wchar_t str[message.length() + 1]; str[message.length()] = '\0';
-        message.toWCharArray(str);
-        char cstr[message.length() + 1];
-        wcharToChar(str, cstr);
-        FakeInput::keyTap(cstr);
+        FakeInput::keyTap(message);
     }
 }
 
@@ -215,11 +203,7 @@ void NetworkThread::startInputLoop()
                     FakeInput::keyTap("BackSpace");
             } else if(message.startsWith("TypeString ")) {
                 message.remove(0, QString("TypeString ").length());
-                message.replace("\uFFFF","\n");
-                wchar_t str[message.length() + 1];
-                message.toWCharArray(str);
-                str[message.length()] = '\0';
-                FakeInput::typeString(str);
+                FakeInput::typeString(message);
             } else if(message.startsWith("SpecialKey ")) {
                 message.remove("SpecialKey ");
                 specialKeyEvent(message);
