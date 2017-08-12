@@ -31,10 +31,11 @@ void typeChar(ushort c) {
 
         qInfo() << "unicodeHex: " << unicodeHex << "\n";
 
+        // money = d83d dcb0
 		// Note: this starts glitching out if you set the pause too short.
 		// Maybe because for unicode characters, the keys must be remapped.
         // 95ms seems to be sufficient.
-        xdo_send_keysequence_window(xdoInstance, CURRENTWINDOW, unicodeHex.toLatin1().data(), 95000);
+        xdo_send_keysequence_window(xdoInstance, CURRENTWINDOW, unicodeHex.toLocal8Bit().data(), 95000);
 	}
     else {
 		char str[] = {c, '\0'};
