@@ -1,3 +1,5 @@
+#include <QString>
+#include <QDebug>
 extern "C" {
 	#include <xdo.h>
 }
@@ -16,6 +18,7 @@ void initFakeInput() {
 }
 
 void freeFakeInput() {
+    stopZoom();
 	xdo_free(xdoInstance);
 }
 
@@ -24,17 +27,19 @@ void typeChar(wchar_t c) {
         keyTap("Return");
 	}
     else if(c >= 0x00A0) { // 0x00A0 is the end of ASCII characters
-        char unicodeCharNumber[10];
-        sprintf(unicodeCharNumber, "U%04X", c);
+        QString unicodeHex;
+        unicodeHex.setNum(c, 16);
+        unicodeHex = "U"+unicodeHex.toUpper();
+
 		// Note: this starts glitching out if you set the pause too short.
 		// Maybe because for unicode characters, the keys must be remapped.
         // 95ms seems to be sufficient.
-        xdo_send_keysequence_window(xdoInstance, CURRENTWINDOW, unicodeCharNumber, 95000);
+        xdo_send_keysequence_window(xdoInstance, CURRENTWINDOW, unicodeHex.toLocal8Bit().data(), 95000);
 	}
-	else {
+    else {
 		char str[] = {c, '\0'};
 		xdo_enter_text_window(xdoInstance, CURRENTWINDOW, str, 12000);
-	}
+    }
 }
 
 
@@ -93,6 +98,23 @@ void mouseScroll(int amount) {
         mouseUp(button);
         amount += incr;
     }
+}
+
+bool zooming = false;
+
+void stopZoom() {
+    if(!zooming)
+        return;
+    keyUp("Alt");
+    zooming = false;
+}
+
+void zoom(int amount) {
+    if(!zooming) {
+        zooming = true;
+        keyDown("Alt");
+    }
+    mouseScroll(amount);
 }
 
 }

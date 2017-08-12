@@ -33,3 +33,9 @@ void SetPasswordDialog::closeEvent(QCloseEvent *event)
     ui->setPasswordEdit->setText("");
     this->hide();
 }
+
+void SetPasswordDialog::show()
+{
+    QDialog::show();
+    ui->setPasswordEdit->setFocus(Qt::OtherFocusReason);
+}

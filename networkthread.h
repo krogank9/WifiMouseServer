@@ -10,15 +10,12 @@
 class NetworkThread : public QThread
 {
 public:
-    NetworkThread();
-    ~NetworkThread();
-
     void run();
     MainWindow *mainWindow;
 private:
     QString getPassword();
-    bool verifyClient(QTcpSocket *socket);
-    void startInputLoop(QTcpSocket *socket);
+    bool verifyClient();
+    void startInputLoop();
     void updateClientIp(QString ip);
 };
 

@@ -10,5 +10,7 @@ void mouseMove(int addX, int addY);
 void mouseDown(int button);
 void mouseUp(int button);
 void mouseScroll(int amount);
+void zoom(int amount);
+void stopZoom();
 
 }

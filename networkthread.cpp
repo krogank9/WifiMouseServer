@@ -4,46 +4,102 @@
 #include <QDebug>
 #include <QDateTime>
 #include <QAbstractSocket>
+#include <QHostInfo>
 
-NetworkThread::NetworkThread()
-{
-    FakeInput::initFakeInput();
+QString serverVersion = "1";
+QTcpSocket *socket;
+
+// todo: change protocol, first byte = # of bytes sent
+
+QString bytesToString(QByteArray bytes) {
+    int len = 0;
+    while(len < bytes.length() && bytes.at(len) != 0)
+        len++;
+    bytes.resize(len);
+
+    return QString(bytes);
 }
 
-NetworkThread::~NetworkThread()
-{
-    FakeInput::freeFakeInput();
+bool writeData(QByteArray data) {
+    data.resize(1024);
+    socket->write(data);
+    return socket->waitForBytesWritten(60);
+}
+
+bool writeString(QString str) {
+    return writeData(str.toUtf8());
+}
+
+qint64 readData(QByteArray *data) {
+    int bytesLeft = data->length();
+    int totalBytesRead = 0;
+    while(bytesLeft > 0) {
+        qint64 bytesRead = socket->read(data->data() + totalBytesRead, bytesLeft);
+
+        if(bytesRead <= 0)
+            break;
+        else {
+            totalBytesRead += bytesRead;
+            bytesLeft -= bytesRead;
+        }
+
+        if(bytesLeft > 0 && socket->waitForReadyRead(50) == false)
+            break;
+    }
+    return totalBytesRead;
+}
+
+QString readString() {
+    QByteArray bytes(1024, 0);
+    if(readData(&bytes) == 1024)
+        return bytesToString(bytes);
+    else
+        return QString("");
 }
 
 void NetworkThread::run()
 {
+   FakeInput::initFakeInput();
+
    QTcpServer tcpServer;
+
+   while(!tcpServer.isListening() && !tcpServer.listen(QHostAddress::Any, 9798)) {
+        qInfo() << "Unable to start server on port 9798. Retrying...\n";
+        this->sleep(1);
+   }
+
+   qInfo() << "Server started, listening for connection...";
+
    while(true) {
        updateClientIp("Not connected");
 
-       if(!tcpServer.isListening() && !tcpServer.listen(QHostAddress::Any, 9798)) {
-           qInfo() << "Unable to start server on port 9798. Retrying...\n";
-           this->sleep(1);
-           continue;
-       }
-       qInfo() << "Server started, listening for connection...";
-       tcpServer.waitForNewConnection(-1);
-       QTcpSocket *socket = tcpServer.nextPendingConnection();
+       tcpServer.waitForNewConnection(1000);
+       socket = tcpServer.nextPendingConnection();
+       tcpServer.setMaxPendingConnections(1);
 
-       if( socket != 0 && verifyClient(socket) ) {
+       if(socket == 0)
+           continue;
+       else
+           socket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
+
+       if( socket != 0 && verifyClient() ) {
+
            QString clientIp = socket->peerAddress().toString();
            int index = clientIp.lastIndexOf(':'); index = index==-1?0:index;
            clientIp = clientIp.right(clientIp.length() - index - 1);
            updateClientIp(clientIp);
 
            qInfo() << "Client verified\n";
-           startInputLoop(socket);
+           startInputLoop();
        }
-       else
+       else if(socket != 0)
            qInfo() << "Could not verify client";
 
        delete socket;
+       socket = 0;
    }
+
+   FakeInput::freeFakeInput();
 }
 
 QString NetworkThread::getPassword()
@@ -53,25 +109,27 @@ QString NetworkThread::getPassword()
     return password;
 }
 
-bool NetworkThread::verifyClient(QTcpSocket *socket)
+bool NetworkThread::verifyClient()
 {
-    if( !socket->waitForReadyRead(2000) )
+    if( !socket->waitForReadyRead(2000) ) {
+        qInfo() << "Read timed out\n";
         return false;
+    }
 
-    QString desiredResponse("cow.emoji.WifiMouseClient "+getPassword()+"\n");
-    QString clientResponse( socket->readLine() );
+    QString desiredResponse("cow.emoji.WifiMouseClient "+getPassword());
+    QString clientResponse = readString();
+    qInfo() << clientResponse;
 
     if(clientResponse == desiredResponse) {
-        socket->write("cow.emoji.WifiMouseServer Accepted\n");
-        socket->waitForBytesWritten(60);
+        QString str = "cow.emoji.WifiMouseServer Accepted "+serverVersion+" "+QHostInfo::localHostName();
+        writeString(str);
+        return true;
     }
     else {
-        socket->write("cow.emoji.WifiMouseServer Pending\n");
-        socket->waitForBytesWritten(60);
+        QString str = "cow.emoji.WifiMouseServer Pending "+serverVersion+" "+QHostInfo::localHostName();
+        writeString(str);
         return false;
     }
-
-    return true;
 }
 
 void wcharToChar(wchar_t *wca, char *ca)
@@ -112,26 +170,29 @@ void specialKeyEvent(QString message)
     }
 }
 
-void NetworkThread::startInputLoop(QTcpSocket *socket)
+void NetworkThread::startInputLoop()
 {
+    int pingCount = 0;
     QString startPassword = getPassword();
     while(true) {
-        if(!socket->waitForReadyRead(2000)) {
+        if(!socket->waitForReadyRead(1000)) {
             qInfo() << "Read timed out...\n";
             break;
         }
 
-        // Read out all lines
-        for(QString message = socket->readLine(); message.length() > 0; message = socket->readLine()) {
-            message = message.left(message.length() - 1); // remove \n at end of each line
+        // Read out all messages sent
+        for(QString message = readString(); message.length() > 0; message = readString()) {
+            bool zoomEvent = false;
 
             if(message == "PING") {
                 if(getPassword() != startPassword)
                     return;
-                socket->write("PING");
-                socket->waitForBytesWritten();
+                qInfo() << "Pinging... " << ++pingCount << "\n";
+                writeString("PING");
+                continue;
             }
-            else if(message.startsWith("MouseMove ")) {
+
+            if(message.startsWith("MouseMove ")) {
                 message.remove("MouseMove ");
                 QStringList coords = message.split(",");
                 int x = ((QString)coords.at(0)).toInt();
@@ -162,7 +223,14 @@ void NetworkThread::startInputLoop(QTcpSocket *socket)
             } else if(message.startsWith("SpecialKey ")) {
                 message.remove("SpecialKey ");
                 specialKeyEvent(message);
+            } else if(message.startsWith("Zoom ")) {
+                zoomEvent = true;
+                message.remove("Zoom ");
+                FakeInput::zoom(message.toInt());
             }
+
+            if(!zoomEvent)
+                FakeInput::stopZoom();
         }
     }
 }

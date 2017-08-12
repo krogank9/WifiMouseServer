@@ -62,7 +62,6 @@ void typeUniChar(wchar_t c) {
 CGKeyCode lastKeyDown = 0;
 qint64 lastKeyTime = 0;
 bool lastKeyStillDown = false;
-
 void keyRepeatCallback() {
     static int i = 1;
     qInfo() << "Test " << i++ << "\n";

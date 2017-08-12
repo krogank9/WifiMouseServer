@@ -16,6 +16,7 @@ public:
     ~SetPasswordDialog();
 
     void closeEvent(QCloseEvent *event);
+    void show();
 
 private:
     Ui::SetPasswordDialog *ui;
