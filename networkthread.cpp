@@ -227,6 +227,8 @@ void NetworkThread::startInputLoop()
                 zoomEvent = true;
                 message.remove("Zoom ");
                 FakeInput::zoom(message.toInt());
+            } else if(message == "Quit") {
+                return;
             }
 
             if(!zoomEvent)
