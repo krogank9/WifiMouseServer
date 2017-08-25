@@ -10,6 +10,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 QT += svg
 QT += network
+QT += bluetooth
 
 win32 {
     SOURCES += fakeinput-windows.cpp
@@ -34,6 +35,9 @@ SOURCES += main.cpp\
     networkthread.cpp \
     runguard.cpp \
     setpassworddialog.cpp \
+    abstractedserver.cpp \
+    encryptutils.cpp \
+    aes.c
 
 HEADERS  += mainwindow.h \
     fixedsvgwidget.h \
@@ -41,7 +45,10 @@ HEADERS  += mainwindow.h \
     networkthread.h \
     runguard.h \
     setpassworddialog.h \
-    fakeinput.h
+    fakeinput.h \
+    abstractedserver.h \
+    encryptutils.h \
+    aes.h
 
 FORMS    += mainwindow.ui \
     setpassworddialog.ui

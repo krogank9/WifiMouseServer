@@ -5,6 +5,7 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QString>
+#include <QEventLoop>
 #include "mainwindow.h"
 
 class NetworkThread : public QThread

@@ -29,9 +29,6 @@ private:
     QIcon *programIcon;
     SetPasswordDialog *setPasswordDialog;
 
-    void loadSettings();
-    void saveSettings();
-
     QString serverPassword;
 
     void updateServerIp();
@@ -70,6 +67,9 @@ public Q_SLOTS:
     QString getPassword();
     void setPassword(QString newPassword);
     void setClientIp(QString ip);
+
+    void loadSettings();
+    void saveSettings();
 };
 
 #endif // MAINWINDOW_H

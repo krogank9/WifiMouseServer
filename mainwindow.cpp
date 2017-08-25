@@ -5,6 +5,7 @@
 #include <QDebug>
 #include <QtNetwork/QNetworkInterface>
 #include <QSettings>
+#include <QCryptographicHash>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -52,7 +53,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
 void MainWindow::loadSettings()
 {
     QSettings settings("WifiMouse", QSettings::NativeFormat);
-    serverPassword = settings.value("pass","").toString();
+    serverPassword = settings.value("pass","").toByteArray();
     ui->startMinimizedCheck->setChecked( settings.value("startMinimized", false).toBool() );
 }
 
@@ -71,6 +72,7 @@ QString MainWindow::getPassword()
 void MainWindow::setPassword(QString newPassword)
 {
     serverPassword = newPassword;
+    saveSettings();
 }
 
 void MainWindow::setClientIp(QString ip)
@@ -187,6 +189,8 @@ void MainWindow::createActions()
     passwordAction = new QAction(tr("Set &password"),this);
     connect(passwordAction, SIGNAL(triggered()), this, SLOT(clickSetPassword()));
     connect(ui->passwordButton, SIGNAL(released()), this, SLOT(clickSetPassword()));
+
+    connect(ui->startMinimizedCheck, SIGNAL(released()), this, SLOT(saveSettings()));
 
     clientTitleAction = new QAction("Client IP", this);
     clientTitleAction->setEnabled(false);

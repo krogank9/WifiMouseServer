@@ -112,7 +112,7 @@ void zoom(int amount) {
         zooming = true;
         keyDown("Alt");
     }
-    mouseScroll(amount);
+    mouseScroll(amount*-1);
 }
 
 }

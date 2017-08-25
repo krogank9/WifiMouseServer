@@ -1,6 +1,7 @@
 #include "setpassworddialog.h"
 #include "ui_setpassworddialog.h"
 #include <QCloseEvent>
+#include <QPushButton>
 
 SetPasswordDialog::SetPasswordDialog(QWidget *parent) :
     QDialog(parent),
@@ -38,4 +39,5 @@ void SetPasswordDialog::show()
 {
     QDialog::show();
     ui->setPasswordEdit->setFocus(Qt::OtherFocusReason);
+    ui->setPasswordButtons->button(QDialogButtonBox::Ok)->setDefault(true);
 }

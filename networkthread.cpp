@@ -1,36 +1,73 @@
 #include "networkthread.h"
 #include "mainwindow.h"
 #include "fakeinput.h"
+#include "abstractedserver.h"
+#include "encryptutils.h"
 #include <QDebug>
 #include <QDateTime>
 #include <QAbstractSocket>
 #include <QHostInfo>
 
 QString serverVersion = "1";
-QTcpSocket *socket;
 
-// todo: change protocol, first byte = # of bytes sent
+/****************************************
+ ****************************************
+ **
+ ** Encryption & socket read/write code
+ **
+ ****************************************
+ ****************************************/
 
-QString bytesToString(QByteArray bytes) {
-    int len = 0;
-    while(len < bytes.length() && bytes.at(len) != 0)
-        len++;
-    bytes.resize(len);
+#define BLOCK_SIZE 512
+QIODevice *socket;
+bool socketIsBluetooth;
+QEventLoop *eventLoop;
 
-    return QString(bytes);
+#define JAVA_INT_MAX_VAL 2147483647
+long sessionIV;
+QString sessionPassword;
+QByteArray sessionPasswordHash;
+
+// wait functions that will work for both TCP & Bluetooth IODevice
+bool waitForBytesWritten(QIODevice *socket, int msecs)
+{
+    QTime stopWatch;
+    stopWatch.start();
+    while(stopWatch.elapsed() < msecs && socket->bytesToWrite() && socket->isOpen()) {
+        eventLoop->processEvents();
+    }
+    return socket->bytesToWrite() == false;
+}
+bool waitForReadyRead(QIODevice *socket, int msecs)
+{
+    QTime stopWatch;
+    stopWatch.start();
+    while(stopWatch.elapsed() < msecs && socket->bytesAvailable() == false && socket->isOpen()) {
+        eventLoop->processEvents();
+    }
+    return socket->bytesAvailable();
 }
 
-bool writeData(QByteArray data) {
-    data.resize(1024);
+
+// write & write encrypted
+bool writeDataUnencrypted(QByteArray data) {
+    data.resize(BLOCK_SIZE);
     socket->write(data);
-    return socket->waitForBytesWritten(60);
+    return waitForBytesWritten(socket, 100);
 }
 
-bool writeString(QString str) {
-    return writeData(str.toUtf8());
+bool writeDataEncrypted(QByteArray data) {
+    if(socketIsBluetooth)
+        return writeDataUnencrypted(data); // bluetooth already encrypted
+
+    data.resize(BLOCK_SIZE);
+    QByteArray iv = EncryptUtils::makeHash16(QString::number(sessionIV).toUtf8());
+    QByteArray encrypted = EncryptUtils::encryptBytes(data, sessionPasswordHash, iv);
+    return writeDataUnencrypted(encrypted);
 }
 
-qint64 readData(QByteArray *data) {
+// read & read encrypted
+qint64 readDataUnencrypted(QByteArray *data) {
     int bytesLeft = data->length();
     int totalBytesRead = 0;
     while(bytesLeft > 0) {
@@ -43,63 +80,126 @@ qint64 readData(QByteArray *data) {
             bytesLeft -= bytesRead;
         }
 
-        if(bytesLeft > 0 && socket->waitForReadyRead(50) == false)
+        if(bytesLeft > 0 && waitForReadyRead(socket, 50) == false)
             break;
     }
     return totalBytesRead;
 }
 
-QString readString() {
-    QByteArray bytes(1024, 0);
-    if(readData(&bytes) == 1024)
-        return bytesToString(bytes);
+qint64 readDataEncrypted(QByteArray *data) {
+    qint64 result = readDataUnencrypted(data);
+    if(socketIsBluetooth)
+        return result; // bluetooth already encrypted
+
+    QByteArray decrypted;
+    if(result == BLOCK_SIZE) {
+        sessionIV = ( sessionIV + 1 ) % JAVA_INT_MAX_VAL;
+        QByteArray iv = EncryptUtils::makeHash16(QString::number(sessionIV).toUtf8());
+        decrypted = EncryptUtils::decryptBytes(*data, sessionPasswordHash, iv);
+    }
+    (*data) = decrypted;
+    return result;
+}
+
+// read & write strings
+bool writeString(QString str, bool encrypt) {
+    if(encrypt)
+        return writeDataEncrypted(str.toUtf8());
+    else
+        return writeDataUnencrypted(str.toUtf8());
+}
+QString readString(bool decrypt) {
+    QByteArray bytes(BLOCK_SIZE, 0);
+
+    int result;
+    if(decrypt)
+        result = readDataEncrypted(&bytes);
+    else
+        result = readDataUnencrypted(&bytes);
+
+    if(result == BLOCK_SIZE)
+        return QString(bytes);
     else
         return QString("");
 }
+
+/****************************************
+ ****************************************
+ **
+ ** Connection search & verify code
+ **
+ ****************************************
+ ****************************************/
 
 void NetworkThread::run()
 {
    FakeInput::initFakeInput();
 
-   QTcpServer tcpServer;
+   QEventLoop threadEventLoop;
+   eventLoop = &threadEventLoop;
 
-   while(!tcpServer.isListening() && !tcpServer.listen(QHostAddress::Any, 9798)) {
-        qInfo() << "Unable to start server on port 9798. Retrying...\n";
-        this->sleep(1);
-   }
+   AbstractedServer server;
 
-   qInfo() << "Server started, listening for connection...";
-
+   int count = 0;
    while(true) {
        updateClientIp("Not connected");
-
-       tcpServer.waitForNewConnection(1000);
-       socket = tcpServer.nextPendingConnection();
-       tcpServer.setMaxPendingConnections(1);
+       qInfo() << "Listening for connection... " << ++count;
+       server.listenWithTimeout(1000);
+       socket = server.nextPendingConnection();
+       socketIsBluetooth = server.pendingIsBluetooth;
 
        if(socket == 0)
            continue;
-       else
-           socket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
 
-       if( socket != 0 && verifyClient() ) {
-
-           QString clientIp = socket->peerAddress().toString();
-           int index = clientIp.lastIndexOf(':'); index = index==-1?0:index;
-           clientIp = clientIp.right(clientIp.length() - index - 1);
-           updateClientIp(clientIp);
+       if( verifyClient() ) {
+           updateClientIp(server.pendingSocketInfo);
 
            qInfo() << "Client verified\n";
            startInputLoop();
        }
-       else if(socket != 0)
+       else
            qInfo() << "Could not verify client";
 
        delete socket;
-       socket = 0;
    }
 
    FakeInput::freeFakeInput();
+}
+
+bool NetworkThread::verifyClient()
+{
+    if( !waitForReadyRead(socket, 1000) ) {
+        qInfo() << "Read timed out\n";
+        return false;
+    }
+
+    sessionPassword = getPassword();
+    sessionPasswordHash = EncryptUtils::makeHash16(sessionPassword.toUtf8());
+    srand(time(NULL));
+    sessionIV = rand() % JAVA_INT_MAX_VAL;
+
+    // First inform we are a server and send sessionIV:
+    if(readString(false) == "cow.emoji.WifiMouseClient") {
+        QString hello_str = "cow.emoji.WifiMouseServer "+serverVersion+" "+QHostInfo::localHostName().replace(" ", "-")+" "+QString::number(sessionIV);
+        writeString(hello_str, false);
+    }
+
+    if(!waitForReadyRead(socket, 1000)) {
+        qInfo() << "Read timed out...\n";
+        return false;
+    }
+
+    // Then, verify client by decoding its encrypted message:
+    QString read = readString(true);
+    qInfo() << read;
+    if(read == "cow.emoji.WifiMouseClient") {
+        writeString("Verified", false);
+        return true;
+    }
+    else {
+        writeString("Wrong password", false);
+        return false;
+    }
 }
 
 QString NetworkThread::getPassword()
@@ -109,74 +209,37 @@ QString NetworkThread::getPassword()
     return password;
 }
 
-bool NetworkThread::verifyClient()
+void NetworkThread::updateClientIp(QString ip)
 {
-    if( !socket->waitForReadyRead(2000) ) {
-        qInfo() << "Read timed out\n";
-        return false;
-    }
-
-    QString desiredResponse("cow.emoji.WifiMouseClient "+getPassword());
-    QString clientResponse = readString();
-    qInfo() << clientResponse;
-
-    if(clientResponse == desiredResponse) {
-        QString str = "cow.emoji.WifiMouseServer Accepted "+serverVersion+" "+QHostInfo::localHostName();
-        writeString(str);
-        return true;
-    }
-    else {
-        QString str = "cow.emoji.WifiMouseServer Pending "+serverVersion+" "+QHostInfo::localHostName();
-        writeString(str);
-        return false;
-    }
+    QMetaObject::invokeMethod(mainWindow, "setClientIp", Q_ARG(QString, ip));
 }
 
-void wcharToChar(wchar_t *wca, char *ca)
-{
-    int index = 0;
-    while(wca[index] != '\0') {
-        ca[index] = wca[index];
-        index++;
-    }
-    ca[index] = '\0';
-}
-
-void specialKeyEvent(QString message)
-{
-    if(message.startsWith("Down ")) {
-        message.remove("Down ");
-        FakeInput::keyUp(message);
-    }
-    else if(message.startsWith("Up ")){
-        message.remove("Up ");
-        FakeInput::keyUp(message);
-    }
-    else {
-        message.remove("Tap ");
-        FakeInput::keyTap(message);
-    }
-}
+/****************************************
+ ****************************************
+ **
+ ** Input loop & server code
+ **
+ ****************************************
+ ****************************************/
 
 void NetworkThread::startInputLoop()
 {
     int pingCount = 0;
-    QString startPassword = getPassword();
     while(true) {
-        if(!socket->waitForReadyRead(1000)) {
+        if(!waitForReadyRead(socket, 1000)) {
             qInfo() << "Read timed out...\n";
             break;
         }
 
         // Read out all messages sent
-        for(QString message = readString(); message.length() > 0; message = readString()) {
+        for(QString message = readString(true); message.length() > 0; message = readString(true)) {
             bool zoomEvent = false;
 
             if(message == "PING") {
-                if(getPassword() != startPassword)
+                if(getPassword() != sessionPassword)
                     return;
                 qInfo() << "Pinging... " << ++pingCount << "\n";
-                writeString("PING");
+                writeString("PING", true);
                 continue;
             }
 
@@ -186,8 +249,7 @@ void NetworkThread::startInputLoop()
                 int x = ((QString)coords.at(0)).toInt();
                 int y = ((QString)coords.at(1)).toInt();
                 FakeInput::mouseMove(x,y);
-            }
-            else if(message.startsWith("MouseScroll ")) {
+            } else if(message.startsWith("MouseScroll ")) {
                 message.remove("MouseScroll ");
                 FakeInput::mouseScroll( message.toInt() );
             } else if(message.startsWith("MouseDown ")) {
@@ -206,22 +268,23 @@ void NetworkThread::startInputLoop()
                 FakeInput::typeString(message);
             } else if(message.startsWith("SpecialKey ")) {
                 message.remove("SpecialKey ");
-                specialKeyEvent(message);
+                if(message.startsWith("Down "))
+                    FakeInput::keyDown(message.remove("Down "));
+                else if(message.startsWith("Up "))
+                    FakeInput::keyUp(message.remove("Up "));
+                else
+                    FakeInput::keyTap(message.remove("Tap "));
             } else if(message.startsWith("Zoom ")) {
                 zoomEvent = true;
                 message.remove("Zoom ");
                 FakeInput::zoom(message.toInt());
-            } else if(message == "Quit") {
-                return;
             }
 
             if(!zoomEvent)
                 FakeInput::stopZoom();
+
+            if(message == "Quit")
+                return;
         }
     }
-}
-
-void NetworkThread::updateClientIp(QString ip)
-{
-    QMetaObject::invokeMethod(mainWindow, "setClientIp", Q_ARG(QString, ip));
 }

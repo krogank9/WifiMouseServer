@@ -18,10 +18,9 @@ int main(int argc, char *argv[])
     }
 
     MainWindow w;
-
-    NetworkThread *networkThread = new NetworkThread();
-    networkThread->mainWindow = &w;
-    networkThread->start();
+    NetworkThread networkThread;
+    networkThread.mainWindow = &w;
+    networkThread.start();
 
     return a.exec();
 }
