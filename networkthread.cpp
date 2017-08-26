@@ -183,6 +183,8 @@ bool NetworkThread::verifyClient()
         QString hello_str = "cow.emoji.WifiMouseServer "+serverVersion+" "+QHostInfo::localHostName().replace(" ", "-")+" "+QString::number(sessionIV);
         writeString(hello_str, false);
     }
+    else
+        return false;
 
     if(!waitForReadyRead(socket, 1000)) {
         qInfo() << "Read timed out...\n";
@@ -190,9 +192,7 @@ bool NetworkThread::verifyClient()
     }
 
     // Then, verify client by decoding its encrypted message:
-    QString read = readString(true);
-    qInfo() << read;
-    if(read == "cow.emoji.WifiMouseClient") {
+    if(readString(true) == "cow.emoji.WifiMouseClient") {
         writeString("Verified", false);
         return true;
     }
