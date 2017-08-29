@@ -1,5 +1,6 @@
 #include <QString>
 #include <QDebug>
+#include <QProcess>
 extern "C" {
 	#include <xdo.h>
 }
@@ -113,6 +114,30 @@ void zoom(int amount) {
         keyDown("Alt");
     }
     mouseScroll(amount*-1);
+}
+
+void shutdown() {
+    QProcess cmd;
+    cmd.start("systemctl poweroff");
+    cmd.waitForFinished(1000);
+}
+
+void restart() {
+    QProcess cmd;
+    cmd.start("systemctl reboot");
+    cmd.waitForFinished(1000);
+}
+
+void logout() {
+    QProcess cmd;
+    cmd.start("xfce4-session-logout --logout");
+    cmd.waitForFinished(1000);
+}
+
+void sleep() {
+    QProcess cmd;
+    cmd.start("systemctl suspend");
+    cmd.waitForFinished(1000);
 }
 
 }

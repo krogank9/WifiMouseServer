@@ -15,4 +15,9 @@ void mouseScroll(int amount);
 void zoom(int amount);
 void stopZoom();
 
+void shutdown();
+void restart();
+void logout();
+void sleep();
+
 }

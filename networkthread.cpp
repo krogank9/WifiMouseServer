@@ -278,6 +278,16 @@ void NetworkThread::startInputLoop()
                 zoomEvent = true;
                 message.remove("Zoom ");
                 FakeInput::zoom(message.toInt());
+            } else if(message.startsWith("Power ")) {
+                message.remove("Power ");
+                if(message == "Shutdown")
+                    FakeInput::shutdown();
+                else if(message == "Restart")
+                    FakeInput::restart();
+                else if(message == "Sleep")
+                    FakeInput::sleep();
+                else if(message == "Logout")
+                    FakeInput::logout();
             }
 
             if(!zoomEvent)
