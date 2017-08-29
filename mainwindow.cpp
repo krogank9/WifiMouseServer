@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "encryptutils.h"
 #include <QTimer>
 #include <QPainter>
 #include <QDebug>
@@ -64,14 +65,15 @@ void MainWindow::saveSettings()
     settings.setValue("startMinimized", ui->startMinimizedCheck->isChecked());
 }
 
-QString MainWindow::getPassword()
+QByteArray MainWindow::getPassword()
 {
     return serverPassword;
 }
 
 void MainWindow::setPassword(QString newPassword)
 {
-    serverPassword = newPassword;
+    // Store password as 16 length hash ready to be used as AES key
+    serverPassword = EncryptUtils::makeHash16(newPassword.toUtf8());
     saveSettings();
 }
 

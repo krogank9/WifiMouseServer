@@ -25,7 +25,6 @@ QEventLoop *eventLoop;
 
 #define JAVA_INT_MAX_VAL 2147483647
 long sessionIV;
-QString sessionPassword;
 QByteArray sessionPasswordHash;
 
 // wait functions that will work for both TCP & Bluetooth IODevice
@@ -173,8 +172,7 @@ bool NetworkThread::verifyClient()
         return false;
     }
 
-    sessionPassword = getPassword();
-    sessionPasswordHash = EncryptUtils::makeHash16(sessionPassword.toUtf8());
+    sessionPasswordHash = getPassword();
     srand(time(NULL));
     sessionIV = rand() % JAVA_INT_MAX_VAL;
 
@@ -202,10 +200,10 @@ bool NetworkThread::verifyClient()
     }
 }
 
-QString NetworkThread::getPassword()
+QByteArray NetworkThread::getPassword()
 {
-    QString password;
-    QMetaObject::invokeMethod( mainWindow, "getPassword", Qt::BlockingQueuedConnection, Q_RETURN_ARG(QString, password));
+    QByteArray password;
+    QMetaObject::invokeMethod( mainWindow, "getPassword", Qt::BlockingQueuedConnection, Q_RETURN_ARG(QByteArray, password));
     return password;
 }
 
@@ -236,7 +234,7 @@ void NetworkThread::startInputLoop()
             bool zoomEvent = false;
 
             if(message == "PING") {
-                if(getPassword() != sessionPassword)
+                if(memcmp(getPassword(), sessionPasswordHash.data(), 16) != 0)
                     return;
                 qInfo() << "Pinging... " << ++pingCount << "\n";
                 writeString("PING", true);

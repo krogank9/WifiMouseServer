@@ -14,7 +14,7 @@ public:
     void run();
     MainWindow *mainWindow;
 private:
-    QString getPassword();
+    QByteArray getPassword();
     bool verifyClient();
     void startInputLoop();
     void updateClientIp(QString ip);

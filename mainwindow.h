@@ -29,7 +29,7 @@ private:
     QIcon *programIcon;
     SetPasswordDialog *setPasswordDialog;
 
-    QString serverPassword;
+    QByteArray serverPassword;
 
     void updateServerIp();
 
@@ -64,7 +64,7 @@ public Q_SLOTS:
     void clickQuit();
     void clickSetPassword();
 
-    QString getPassword();
+    QByteArray getPassword();
     void setPassword(QString newPassword);
     void setClientIp(QString ip);
 
