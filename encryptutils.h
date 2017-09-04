@@ -4,13 +4,11 @@
 #include <QByteArray>
 #include <QString>
 
-class EncryptUtils
+namespace EncryptUtils
 {
-public:
-    static QByteArray makeHash16(QByteArray toHash);
-    static QByteArray decryptBytes(QByteArray data, QByteArray key, QByteArray iv);
-    static QByteArray encryptBytes(QByteArray data, QByteArray key, QByteArray iv);
-private:
-};
+    QByteArray makeHash16(QByteArray toHash);
+    QByteArray decryptBytes(QByteArray data, QByteArray key, QByteArray iv);
+    QByteArray encryptBytes(QByteArray data, QByteArray key, QByteArray iv);
+}
 
 #endif // ENCRYPTUTILS_H

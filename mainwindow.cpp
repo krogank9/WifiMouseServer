@@ -55,6 +55,8 @@ void MainWindow::loadSettings()
 {
     QSettings settings("WifiMouse", QSettings::NativeFormat);
     serverPassword = settings.value("pass","").toByteArray();
+    if(serverPassword.length() != 16)
+        serverPassword = EncryptUtils::makeHash16("");
     ui->startMinimizedCheck->setChecked( settings.value("startMinimized", false).toBool() );
 }
 

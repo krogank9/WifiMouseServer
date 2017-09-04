@@ -19,7 +19,7 @@ public:
     void trySetupServers();
 
     QString pendingSocketInfo;
-    bool pendingIsBluetooth = false;
+    bool pendingIsBluetooth;
 
 private:
     QEventLoop eventLoop;

@@ -3,124 +3,16 @@
 #include "fakeinput.h"
 #include "abstractedserver.h"
 #include "encryptutils.h"
+#include "socketutils.h"
+#include "fileutils.h"
 #include <QDebug>
 #include <QDateTime>
 #include <QAbstractSocket>
 #include <QHostInfo>
 
+using namespace SocketUtils;
+
 QString serverVersion = "1";
-
-/****************************************
- ****************************************
- **
- ** Encryption & socket read/write code
- **
- ****************************************
- ****************************************/
-
-#define BLOCK_SIZE 512
-QIODevice *socket;
-bool socketIsBluetooth;
-QEventLoop *eventLoop;
-
-#define JAVA_INT_MAX_VAL 2147483647
-long sessionIV;
-QByteArray sessionPasswordHash;
-
-// wait functions that will work for both TCP & Bluetooth IODevice
-bool waitForBytesWritten(QIODevice *socket, int msecs)
-{
-    QTime stopWatch;
-    stopWatch.start();
-    while(stopWatch.elapsed() < msecs && socket->bytesToWrite() && socket->isOpen()) {
-        eventLoop->processEvents();
-    }
-    return socket->bytesToWrite() == false;
-}
-bool waitForReadyRead(QIODevice *socket, int msecs)
-{
-    QTime stopWatch;
-    stopWatch.start();
-    while(stopWatch.elapsed() < msecs && socket->bytesAvailable() == false && socket->isOpen()) {
-        eventLoop->processEvents();
-    }
-    return socket->bytesAvailable();
-}
-
-
-// write & write encrypted
-bool writeDataUnencrypted(QByteArray data) {
-    data.resize(BLOCK_SIZE);
-    socket->write(data);
-    return waitForBytesWritten(socket, 100);
-}
-
-bool writeDataEncrypted(QByteArray data) {
-    if(socketIsBluetooth)
-        return writeDataUnencrypted(data); // bluetooth already encrypted
-
-    data.resize(BLOCK_SIZE);
-    QByteArray iv = EncryptUtils::makeHash16(QString::number(sessionIV).toUtf8());
-    QByteArray encrypted = EncryptUtils::encryptBytes(data, sessionPasswordHash, iv);
-    return writeDataUnencrypted(encrypted);
-}
-
-// read & read encrypted
-qint64 readDataUnencrypted(QByteArray *data) {
-    int bytesLeft = data->length();
-    int totalBytesRead = 0;
-    while(bytesLeft > 0) {
-        qint64 bytesRead = socket->read(data->data() + totalBytesRead, bytesLeft);
-
-        if(bytesRead <= 0)
-            break;
-        else {
-            totalBytesRead += bytesRead;
-            bytesLeft -= bytesRead;
-        }
-
-        if(bytesLeft > 0 && waitForReadyRead(socket, 50) == false)
-            break;
-    }
-    return totalBytesRead;
-}
-
-qint64 readDataEncrypted(QByteArray *data) {
-    qint64 result = readDataUnencrypted(data);
-    if(socketIsBluetooth)
-        return result; // bluetooth already encrypted
-
-    QByteArray decrypted;
-    if(result == BLOCK_SIZE) {
-        sessionIV = ( sessionIV + 1 ) % JAVA_INT_MAX_VAL;
-        QByteArray iv = EncryptUtils::makeHash16(QString::number(sessionIV).toUtf8());
-        decrypted = EncryptUtils::decryptBytes(*data, sessionPasswordHash, iv);
-    }
-    (*data) = decrypted;
-    return result;
-}
-
-// read & write strings
-bool writeString(QString str, bool encrypt) {
-    if(encrypt)
-        return writeDataEncrypted(str.toUtf8());
-    else
-        return writeDataUnencrypted(str.toUtf8());
-}
-QString readString(bool decrypt) {
-    QByteArray bytes(BLOCK_SIZE, 0);
-
-    int result;
-    if(decrypt)
-        result = readDataEncrypted(&bytes);
-    else
-        result = readDataUnencrypted(&bytes);
-
-    if(result == BLOCK_SIZE)
-        return QString(bytes);
-    else
-        return QString("");
-}
 
 /****************************************
  ****************************************
@@ -134,9 +26,6 @@ void NetworkThread::run()
 {
    FakeInput::initFakeInput();
 
-   QEventLoop threadEventLoop;
-   eventLoop = &threadEventLoop;
-
    AbstractedServer server;
 
    int count = 0;
@@ -144,11 +33,12 @@ void NetworkThread::run()
        updateClientIp("Not connected");
        qInfo() << "Listening for connection... " << ++count;
        server.listenWithTimeout(1000);
-       socket = server.nextPendingConnection();
-       socketIsBluetooth = server.pendingIsBluetooth;
 
+       QIODevice *socket = server.nextPendingConnection();
        if(socket == 0)
            continue;
+       else
+           setGlobalSocket(socket, server.pendingIsBluetooth);
 
        if( verifyClient() ) {
            updateClientIp(server.pendingSocketInfo);
@@ -167,14 +57,14 @@ void NetworkThread::run()
 
 bool NetworkThread::verifyClient()
 {
-    if( !waitForReadyRead(socket, 1000) ) {
+    if( !waitForReadyRead(1000) ) {
         qInfo() << "Read timed out\n";
         return false;
     }
 
-    sessionPasswordHash = getPassword();
     srand(time(NULL));
-    sessionIV = rand() % JAVA_INT_MAX_VAL;
+    long sessionIV = rand() % JAVA_INT_MAX_VAL;
+    SocketUtils::initSession(sessionIV, getPassword());
 
     // First inform we are a server and send sessionIV:
     if(readString(false) == "cow.emoji.WifiMouseClient") {
@@ -184,7 +74,7 @@ bool NetworkThread::verifyClient()
     else
         return false;
 
-    if(!waitForReadyRead(socket, 1000)) {
+    if(!waitForReadyRead(1000)) {
         qInfo() << "Read timed out...\n";
         return false;
     }
@@ -224,7 +114,7 @@ void NetworkThread::startInputLoop()
 {
     int pingCount = 0;
     while(true) {
-        if(!waitForReadyRead(socket, 1000)) {
+        if(!waitForReadyRead(1000)) {
             qInfo() << "Read timed out...\n";
             break;
         }
@@ -234,7 +124,7 @@ void NetworkThread::startInputLoop()
             bool zoomEvent = false;
 
             if(message == "PING") {
-                if(memcmp(getPassword(), sessionPasswordHash.data(), 16) != 0)
+                if( memcmp(getPassword().data(), getSessionHash().data(), 16) != 0)
                     return;
                 qInfo() << "Pinging... " << ++pingCount << "\n";
                 writeString("PING", true);
@@ -286,6 +176,9 @@ void NetworkThread::startInputLoop()
                     FakeInput::sleep();
                 else if(message == "Logout")
                     FakeInput::logout();
+            } else if(message.startsWith("FileManager ")) {
+                message = message.remove(0, QString("FileManager ").length());
+                FileUtils::fileManagerCommand(message);
             }
 
             if(!zoomEvent)
