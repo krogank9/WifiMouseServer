@@ -3,6 +3,7 @@
 #include "runguard.h"
 #include <QApplication>
 #include <QDebug>
+#include "fileutils.h"
 
 int main(int argc, char *argv[])
 {

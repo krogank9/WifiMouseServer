@@ -2,6 +2,21 @@
 #include "encryptutils.h"
 #include <QEventLoop>
 #include <QTime>
+#include <QDebug>
+
+QByteArray longToBytes(long n) {
+    QByteArray bytes(4, 0);
+    for(int i=0; i<bytes.length(); i++)
+        *(bytes.data() + i) = 0xff & (n >> 8*i);
+    return bytes;
+}
+
+long bytesToLong(QByteArray bytes) {
+    long n = 0;
+    for(int i=0; i<bytes.length(); i++)
+        n += bytes.at(i) << 8*i;
+    return n;
+}
 
 namespace SocketUtils
 {
@@ -54,7 +69,18 @@ bool waitForReadyRead(int msecs)
 // write & write encrypted
 bool writeDataUnencrypted(QByteArray data) {
     data.resize(BLOCK_SIZE);
-    socket->write(data);
+    int wroteSoFar = 0;
+    while(wroteSoFar < data.size()) {
+        int wroteThisTime = socket->write(data.data() + wroteSoFar, data.size() - wroteSoFar);
+        if(wroteThisTime <= 0)
+            break;
+        else
+            wroteSoFar += wroteThisTime;
+    }
+
+    if(wroteSoFar != data.size())
+        socket->close();
+
     return waitForBytesWritten(100);
 }
 
@@ -63,6 +89,7 @@ bool writeDataEncrypted(QByteArray data) {
         return writeDataUnencrypted(data); // bluetooth already encrypted
 
     data.resize(BLOCK_SIZE);
+    sessionIV = ( sessionIV + 1 ) % JAVA_INT_MAX_VAL;
     QByteArray iv = EncryptUtils::makeHash16(QString::number(sessionIV).toUtf8());
     QByteArray encrypted = EncryptUtils::encryptBytes(data, sessionPasswordHash, iv);
     return writeDataUnencrypted(encrypted);
@@ -73,17 +100,29 @@ qint64 readDataUnencrypted(QByteArray *data) {
     int bytesLeft = data->length();
     int totalBytesRead = 0;
     while(bytesLeft > 0) {
-        qint64 bytesRead = socket->read(data->data() + totalBytesRead, bytesLeft);
+        qint64 bytesRead;
+        do {
+            bytesRead = socket->read(data->data() + totalBytesRead, bytesLeft);
 
-        if(bytesRead <= 0)
-            break;
-        else {
-            totalBytesRead += bytesRead;
-            bytesLeft -= bytesRead;
+            if(bytesRead < 0) {
+                qInfo() << "socket read error";
+                return totalBytesRead;
+            }
+            else {
+                totalBytesRead += bytesRead;
+                bytesLeft -= bytesRead;
+            }
         }
+        while(bytesRead > 0 && bytesLeft > 0);
 
-        if(bytesLeft > 0 && waitForReadyRead(50) == false)
+        // No bytes left to read. If Block hasn't finished reading, try wait
+        if(bytesLeft > 0 && !waitForReadyRead(1000)) {
+            // Close socket if stream disrupted
+            if(totalBytesRead > 0)
+                socket->close();
+            qInfo() << "failed to read a full block. " << totalBytesRead;
             break;
+        }
     }
     return totalBytesRead;
 }

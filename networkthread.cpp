@@ -179,6 +179,9 @@ void NetworkThread::startInputLoop()
             } else if(message.startsWith("FileManager ")) {
                 message = message.remove(0, QString("FileManager ").length());
                 FileUtils::fileManagerCommand(message);
+            } else if(message.startsWith("ScreenMirror ")) {
+                message = message.remove("ScreenMirror ");
+                FileUtils::sendScreenJPG(message.toInt());
             }
 
             if(!zoomEvent)

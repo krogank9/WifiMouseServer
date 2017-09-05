@@ -6,6 +6,7 @@
 namespace FileUtils
 {
     void fileManagerCommand(QString command);
+    void sendScreenJPG(int quality);
 }
 
 #endif // FILEUTILS_H

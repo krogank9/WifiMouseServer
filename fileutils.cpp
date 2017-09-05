@@ -5,6 +5,12 @@
 #include <QUrl>
 #include <QDateTime>
 #include <QIODevice>
+#include <QPixmap>
+#include <QCursor>
+#include <QPainter>
+#include <QScreen>
+#include <QGuiApplication>
+#include <QBuffer>
 #include <QDebug>
 
 using namespace SocketUtils;
@@ -249,6 +255,50 @@ void download(QString name)
 
 void receiveSent(QString name)
 {
+    // Make sure ready to receive file & can write
+    QFile toWrite(dir.absolutePath() + "/" + name);
+    if( toWrite.open(QIODevice::WriteOnly) )
+        writeString("Ready", true);
+    else
+        writeString("Failed", true);
+
+    // Get file size & start passing file
+    int fileSize = readString(true).toInt();
+    QByteArray fileBytes(fileSize, '0');
+
+    int readSoFar = 0;
+    while(readSoFar < fileSize) {
+        QByteArray block(BLOCK_SIZE, '0');
+        qint64 readSize = 0;
+        while((readSize = readDataEncrypted(&block)) == BLOCK_SIZE) {
+            // Copy block to file's bytes
+            for(int i=0; i<BLOCK_SIZE && i+readSoFar < fileBytes.size(); i++)
+                *(fileBytes.data() + readSoFar + i) = *(block.data() + i);
+            readSoFar += BLOCK_SIZE;
+        }
+
+        // No data left to read. If hasn't read all bytes, try wait
+        if(readSoFar < fileSize && !waitForReadyRead(60)) {
+            return;
+        }
+    }
+
+    int writtenSoFar = 0;
+    while(writtenSoFar < fileSize) {
+        int remainingBytes = fileBytes.size() - writtenSoFar;
+        int writtenThisTime = toWrite.write(fileBytes.data() + writtenSoFar, remainingBytes);
+
+        qInfo() << "writtenThisTime" << writtenThisTime;
+
+        if(writtenThisTime <= 0)
+            return;
+        else
+            writtenSoFar += writtenThisTime;
+    }
+    toWrite.close();
+
+    qInfo() << "fileSize" << fileSize;
+    qInfo() << "successfully wrote file";
 }
 
 void fileManagerCommand(QString command)
@@ -275,6 +325,34 @@ void fileManagerCommand(QString command)
         download(command.remove(0, QString("Download ").length()));
     } else if(command.startsWith("Send ")) {
         receiveSent(command.remove(0, QString("Send ").length()));
+    }
+}
+
+void sendScreenJPG(int quality)
+{
+    QScreen *screen = QGuiApplication::primaryScreen();
+    QByteArray jpgBytes;
+    QPixmap screenshot = screen->grabWindow(0);
+
+    QBuffer buffer(&jpgBytes);
+    buffer.open(QIODevice::WriteOnly);
+    screenshot.save(&buffer, "JPG", quality);
+
+    qInfo() << "Sending screen " << quality;
+    writeString(QString::number(jpgBytes.size()), true);
+
+    int sentSoFar = 0;
+    while(sentSoFar < jpgBytes.size()) {
+        if(jpgBytes.size() - sentSoFar >= BLOCK_SIZE) {
+            QByteArray block(jpgBytes.data() + sentSoFar, BLOCK_SIZE);
+            writeDataUnencrypted(block);
+        }
+        else {
+            QByteArray block(jpgBytes.data() + sentSoFar, jpgBytes.size() - sentSoFar);
+            block.resize(BLOCK_SIZE);
+            writeDataUnencrypted(block);
+        }
+        sentSoFar += BLOCK_SIZE;
     }
 }
 
