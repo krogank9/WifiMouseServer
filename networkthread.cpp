@@ -57,27 +57,18 @@ void NetworkThread::run()
 
 bool NetworkThread::verifyClient()
 {
-    if( !waitForReadyRead(1000) ) {
-        qInfo() << "Read timed out\n";
-        return false;
-    }
-
     srand(time(NULL));
     long sessionIV = rand() % JAVA_INT_MAX_VAL;
     SocketUtils::initSession(sessionIV, getPassword());
 
     // First inform we are a server and send sessionIV:
     if(readString(false) == "cow.emoji.WifiMouseClient") {
+        qInfo() << "unencrypted verified";
         QString hello_str = "cow.emoji.WifiMouseServer "+serverVersion+" "+QHostInfo::localHostName().replace(" ", "-")+" "+QString::number(sessionIV);
         writeString(hello_str, false);
     }
     else
         return false;
-
-    if(!waitForReadyRead(1000)) {
-        qInfo() << "Read timed out...\n";
-        return false;
-    }
 
     // Then, verify client by decoding its encrypted message:
     if(readString(true) == "cow.emoji.WifiMouseClient") {
@@ -114,81 +105,81 @@ void NetworkThread::startInputLoop()
 {
     int pingCount = 0;
     while(true) {
-        if(!waitForReadyRead(1000)) {
+        if(!bytesAvailable() && !waitForReadyRead(1000)) {
             qInfo() << "Read timed out...\n";
             break;
         }
 
-        // Read out all messages sent
-        for(QString message = readString(true); message.length() > 0; message = readString(true)) {
-            bool zoomEvent = false;
+        QString message = readString(true);
+        qInfo() << message;
 
-            if(message == "PING") {
-                if( memcmp(getPassword().data(), getSessionHash().data(), 16) != 0)
-                    return;
-                qInfo() << "Pinging... " << ++pingCount << "\n";
-                writeString("PING", true);
-                continue;
-            }
+        bool zoomEvent = false;
 
-            if(message.startsWith("MouseMove ")) {
-                message.remove("MouseMove ");
-                QStringList coords = message.split(",");
-                int x = ((QString)coords.at(0)).toInt();
-                int y = ((QString)coords.at(1)).toInt();
-                FakeInput::mouseMove(x,y);
-            } else if(message.startsWith("MouseScroll ")) {
-                message.remove("MouseScroll ");
-                FakeInput::mouseScroll( message.toInt() );
-            } else if(message.startsWith("MouseDown ")) {
-                message.remove("MouseDown ");
-                FakeInput::mouseDown( message.toInt() );
-            } else if(message.startsWith("MouseUp ")) {
-                message.remove("MouseUp ");
-                FakeInput::mouseUp( message.toInt() );
-            } else if(message.startsWith("Backspace ")) {
-                message.remove("Backspace");
-                int n = abs( message.toInt() );
-                while(n-- > 0)
-                    FakeInput::keyTap("BackSpace");
-            } else if(message.startsWith("TypeString ")) {
-                message.remove(0, QString("TypeString ").length());
-                FakeInput::typeString(message);
-            } else if(message.startsWith("SpecialKey ")) {
-                message.remove("SpecialKey ");
-                if(message.startsWith("Down "))
-                    FakeInput::keyDown(message.remove("Down "));
-                else if(message.startsWith("Up "))
-                    FakeInput::keyUp(message.remove("Up "));
-                else
-                    FakeInput::keyTap(message.remove("Tap "));
-            } else if(message.startsWith("Zoom ")) {
-                zoomEvent = true;
-                message.remove("Zoom ");
-                FakeInput::zoom(message.toInt());
-            } else if(message.startsWith("Power ")) {
-                message.remove("Power ");
-                if(message == "Shutdown")
-                    FakeInput::shutdown();
-                else if(message == "Restart")
-                    FakeInput::restart();
-                else if(message == "Sleep")
-                    FakeInput::sleep();
-                else if(message == "Logout")
-                    FakeInput::logout();
-            } else if(message.startsWith("FileManager ")) {
-                message = message.remove(0, QString("FileManager ").length());
-                FileUtils::fileManagerCommand(message);
-            } else if(message.startsWith("ScreenMirror ")) {
-                message = message.remove("ScreenMirror ");
-                FileUtils::sendScreenJPG(message.toInt());
-            }
-
-            if(!zoomEvent)
-                FakeInput::stopZoom();
-
-            if(message == "Quit")
+        if(message == "PING") {
+            if( memcmp(getPassword().data(), getSessionHash().data(), 16) != 0)
                 return;
+            qInfo() << "Pinging... " << ++pingCount << "\n";
+            writeString("PING", true);
+            continue;
         }
+
+        if(message.startsWith("MouseMove ")) {
+            message.remove("MouseMove ");
+            QStringList coords = message.split(",");
+            int x = ((QString)coords.at(0)).toInt();
+            int y = ((QString)coords.at(1)).toInt();
+            FakeInput::mouseMove(x,y);
+        } else if(message.startsWith("MouseScroll ")) {
+            message.remove("MouseScroll ");
+            FakeInput::mouseScroll( message.toInt() );
+        } else if(message.startsWith("MouseDown ")) {
+            message.remove("MouseDown ");
+            FakeInput::mouseDown( message.toInt() );
+        } else if(message.startsWith("MouseUp ")) {
+            message.remove("MouseUp ");
+            FakeInput::mouseUp( message.toInt() );
+        } else if(message.startsWith("Backspace ")) {
+            message.remove("Backspace");
+            int n = abs( message.toInt() );
+            while(n-- > 0)
+                FakeInput::keyTap("BackSpace");
+        } else if(message.startsWith("TypeString ")) {
+            message.remove(0, QString("TypeString ").length());
+            FakeInput::typeString(message);
+        } else if(message.startsWith("SpecialKey ")) {
+            message.remove("SpecialKey ");
+            if(message.startsWith("Down "))
+                FakeInput::keyDown(message.remove("Down "));
+            else if(message.startsWith("Up "))
+                FakeInput::keyUp(message.remove("Up "));
+            else
+                FakeInput::keyTap(message.remove("Tap "));
+        } else if(message.startsWith("Zoom ")) {
+            zoomEvent = true;
+            message.remove("Zoom ");
+            FakeInput::zoom(message.toInt());
+        } else if(message.startsWith("Power ")) {
+            message.remove("Power ");
+            if(message == "Shutdown")
+                FakeInput::shutdown();
+            else if(message == "Restart")
+                FakeInput::restart();
+            else if(message == "Sleep")
+                FakeInput::sleep();
+            else if(message == "Logout")
+                FakeInput::logout();
+        } else if(message.startsWith("FileManager ")) {
+            message = message.remove(0, QString("FileManager ").length());
+            FileUtils::fileManagerCommand(message);
+        } else if(message.startsWith("ScreenMirror ")) {
+            message = message.remove("ScreenMirror ");
+            FileUtils::sendScreenJPG( message.toInt() );
+        }
+
+        if(!zoomEvent)
+            FakeInput::stopZoom();
+
+        if(message == "Quit")
+            return;
     }
 }

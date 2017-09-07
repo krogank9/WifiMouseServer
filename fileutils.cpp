@@ -228,32 +228,22 @@ void details(QString name)
     writeString(details, true);
 }
 
-void download(QString name)
+void sendFileForDownload(QString name)
 {
     QFileInfo info = getFileInfo(name);
     QFile file(info.absoluteFilePath());
-    int fileSize = file.size();
-    writeString(QString::number(fileSize), true);
     if(file.exists() && file.open(QIODevice::ReadOnly)) {
-        QByteArray bytes = file.readAll();
-        long readSoFar = 0;
-        while(readSoFar < fileSize) {
-            if(bytes.size() - readSoFar >= BLOCK_SIZE) {
-                QByteArray block(bytes.data() + readSoFar, BLOCK_SIZE);
-                writeDataEncrypted(block);
-            }
-            else {
-                QByteArray block(bytes.data() + readSoFar, bytes.size() - readSoFar);
-                block.resize(BLOCK_SIZE);
-                writeDataEncrypted(block);
-            }
-            readSoFar += BLOCK_SIZE;
-        }
+        writeString("Sending", true);
+        QByteArray fileBytes = file.readAll();
         file.close();
+        writeDataEncrypted(fileBytes);
+    }
+    else {
+        writeString("Failed", true);
     }
 }
 
-void receiveSent(QString name)
+void receiveSentFile(QString name)
 {
     // Make sure ready to receive file & can write
     QFile toWrite(dir.absolutePath() + "/" + name);
@@ -262,42 +252,26 @@ void receiveSent(QString name)
     else
         writeString("Failed", true);
 
-    // Get file size & start passing file
-    int fileSize = readString(true).toInt();
-    QByteArray fileBytes(fileSize, '0');
+    // Receive the file
+    QByteArray fileBytes = readDataEncrypted();
 
-    int readSoFar = 0;
-    while(readSoFar < fileSize) {
-        QByteArray block(BLOCK_SIZE, '0');
-        qint64 readSize = 0;
-        while((readSize = readDataEncrypted(&block)) == BLOCK_SIZE) {
-            // Copy block to file's bytes
-            for(int i=0; i<BLOCK_SIZE && i+readSoFar < fileBytes.size(); i++)
-                *(fileBytes.data() + readSoFar + i) = *(block.data() + i);
-            readSoFar += BLOCK_SIZE;
-        }
-
-        // No data left to read. If hasn't read all bytes, try wait
-        if(readSoFar < fileSize && !waitForReadyRead(60)) {
-            return;
-        }
-    }
-
+    // Write it to a file with given name
     int writtenSoFar = 0;
-    while(writtenSoFar < fileSize) {
+    while(writtenSoFar < fileBytes.length()) {
         int remainingBytes = fileBytes.size() - writtenSoFar;
         int writtenThisTime = toWrite.write(fileBytes.data() + writtenSoFar, remainingBytes);
 
-        qInfo() << "writtenThisTime" << writtenThisTime;
-
-        if(writtenThisTime <= 0)
+        if(writtenThisTime <= 0) {
+            writeString("Failed", true);
             return;
+        }
         else
             writtenSoFar += writtenThisTime;
     }
     toWrite.close();
 
-    qInfo() << "fileSize" << fileSize;
+    writeString("Success", true);
+    qInfo() << "fileSize" << fileBytes.length();
     qInfo() << "successfully wrote file";
 }
 
@@ -322,9 +296,9 @@ void fileManagerCommand(QString command)
     } else if(command.startsWith("Details ")) {
         details(command.remove(0, QString("Details ").length()));
     } else if(command.startsWith("Download ")) {
-        download(command.remove(0, QString("Download ").length()));
+        sendFileForDownload(command.remove(0, QString("Download ").length()));
     } else if(command.startsWith("Send ")) {
-        receiveSent(command.remove(0, QString("Send ").length()));
+        receiveSentFile(command.remove(0, QString("Send ").length()));
     }
 }
 
@@ -338,22 +312,9 @@ void sendScreenJPG(int quality)
     buffer.open(QIODevice::WriteOnly);
     screenshot.save(&buffer, "JPG", quality);
 
-    qInfo() << "Sending screen " << quality;
-    writeString(QString::number(jpgBytes.size()), true);
+    qInfo() << "Sending screen" << quality << "size" << buffer.size();
 
-    int sentSoFar = 0;
-    while(sentSoFar < jpgBytes.size()) {
-        if(jpgBytes.size() - sentSoFar >= BLOCK_SIZE) {
-            QByteArray block(jpgBytes.data() + sentSoFar, BLOCK_SIZE);
-            writeDataUnencrypted(block);
-        }
-        else {
-            QByteArray block(jpgBytes.data() + sentSoFar, jpgBytes.size() - sentSoFar);
-            block.resize(BLOCK_SIZE);
-            writeDataUnencrypted(block);
-        }
-        sentSoFar += BLOCK_SIZE;
-    }
+    writeDataEncrypted(jpgBytes);
 }
 
 }

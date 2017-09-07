@@ -3,18 +3,26 @@
 #include <QEventLoop>
 #include <QTime>
 #include <QDebug>
+#include <QTextCodec>
 
-QByteArray longToBytes(long n) {
+qint64 MIN(qint64 a, qint64 b) {
+    return a<b?a:b;
+}
+
+QByteArray intToBytes(unsigned int n) {
     QByteArray bytes(4, 0);
     for(int i=0; i<bytes.length(); i++)
-        *(bytes.data() + i) = 0xff & (n >> 8*i);
+        *(bytes.data() + i) = 0xFF & (n >> 8*i);
     return bytes;
 }
 
-long bytesToLong(QByteArray bytes) {
-    long n = 0;
-    for(int i=0; i<bytes.length(); i++)
-        n += bytes.at(i) << 8*i;
+unsigned int bytesToInt(QByteArray bytes) {
+    if(bytes.length() < 4)
+        return 0;
+    int n = int((unsigned char)(bytes.at(0)) << 0 |
+                (unsigned char)(bytes.at(1)) << 8 |
+                (unsigned char)(bytes.at(2)) << 16 |
+                (unsigned char)(bytes.at(3)) << 24);
     return n;
 }
 
@@ -44,6 +52,8 @@ QByteArray getSessionHash()
     return sessionPasswordHash;
 }
 
+bool bytesAvailable() { return socket->bytesAvailable() > 0; }
+
 // wait functions that will work for both TCP & Bluetooth IODevice
 bool waitForBytesWritten(int msecs)
 {
@@ -63,12 +73,10 @@ bool waitForReadyRead(int msecs)
     while(stopWatch.elapsed() < msecs && socket->bytesAvailable() == false && socket->isOpen()) {
         eventLoop.processEvents();
     }
-    return socket->bytesAvailable();
+    return bytesAvailable();
 }
 
-// write & write encrypted
-bool writeDataUnencrypted(QByteArray data) {
-    data.resize(BLOCK_SIZE);
+bool writeAllData(QByteArray data) {
     int wroteSoFar = 0;
     while(wroteSoFar < data.size()) {
         int wroteThisTime = socket->write(data.data() + wroteSoFar, data.size() - wroteSoFar);
@@ -81,22 +89,34 @@ bool writeDataUnencrypted(QByteArray data) {
     if(wroteSoFar != data.size())
         socket->close();
 
-    return waitForBytesWritten(100);
+    return wroteSoFar == data.size();
+}
+
+// write & write encrypted
+bool writeDataUnencrypted(QByteArray data) {
+    return writeAllData(intToBytes(data.size())) && writeAllData(data) && socket->waitForBytesWritten(1000);
 }
 
 bool writeDataEncrypted(QByteArray data) {
     if(socketIsBluetooth)
         return writeDataUnencrypted(data); // bluetooth already encrypted
 
-    data.resize(BLOCK_SIZE);
+    int originalSize = data.size();
+    data = intToBytes(originalSize) + data;
+    // AES encryption requires 16 byte blocks
+    int padding = data.size() > 16 ? 16-(data.size()%16) : 16 - data.size();
+    data.resize(data.size() + padding);
+
     sessionIV = ( sessionIV + 1 ) % JAVA_INT_MAX_VAL;
     QByteArray iv = EncryptUtils::makeHash16(QString::number(sessionIV).toUtf8());
     QByteArray encrypted = EncryptUtils::encryptBytes(data, sessionPasswordHash, iv);
+
     return writeDataUnencrypted(encrypted);
 }
 
-// read & read encrypted
-qint64 readDataUnencrypted(QByteArray *data) {
+bool readAllData(QByteArray *data) {
+    if(!bytesAvailable() && !waitForReadyRead(1000))
+        return false;
     int bytesLeft = data->length();
     int totalBytesRead = 0;
     while(bytesLeft > 0) {
@@ -106,7 +126,7 @@ qint64 readDataUnencrypted(QByteArray *data) {
 
             if(bytesRead < 0) {
                 qInfo() << "socket read error";
-                return totalBytesRead;
+                return false;
             }
             else {
                 totalBytesRead += bytesRead;
@@ -117,29 +137,45 @@ qint64 readDataUnencrypted(QByteArray *data) {
 
         // No bytes left to read. If Block hasn't finished reading, try wait
         if(bytesLeft > 0 && !waitForReadyRead(1000)) {
-            // Close socket if stream disrupted
-            if(totalBytesRead > 0)
-                socket->close();
-            qInfo() << "failed to read a full block. " << totalBytesRead;
-            break;
+            socket->close();
+            return false;
         }
     }
-    return totalBytesRead;
+    return true;
 }
 
-qint64 readDataEncrypted(QByteArray *data) {
-    qint64 result = readDataUnencrypted(data);
-    if(socketIsBluetooth)
-        return result; // bluetooth already encrypted
+// read & read encrypted
+QByteArray readDataUnencrypted() {
+    // Get data size
+    QByteArray dataLengthBytes(4, 0);
+    if( readAllData(&dataLengthBytes) == false )
+        return QByteArray();
+    int dataLength = bytesToInt(dataLengthBytes);
+    qInfo() << "dataLength" << dataLength;
 
-    QByteArray decrypted;
-    if(result == BLOCK_SIZE) {
-        sessionIV = ( sessionIV + 1 ) % JAVA_INT_MAX_VAL;
-        QByteArray iv = EncryptUtils::makeHash16(QString::number(sessionIV).toUtf8());
-        decrypted = EncryptUtils::decryptBytes(*data, sessionPasswordHash, iv);
-    }
-    (*data) = decrypted;
-    return result;
+    // Read data
+    QByteArray data(dataLength, 0);
+    if( readAllData(&data) )
+        return data;
+    else
+        return QByteArray();
+}
+
+QByteArray readDataEncrypted() {
+    QByteArray data = readDataUnencrypted();
+    if(socketIsBluetooth)
+        return data; // bluetooth protocol automatically encrypts/decrypts
+
+    sessionIV = ( sessionIV + 1 ) % JAVA_INT_MAX_VAL;
+    QByteArray iv = EncryptUtils::makeHash16(QString::number(sessionIV).toUtf8());
+    data = EncryptUtils::decryptBytes(data, sessionPasswordHash, iv);
+
+    // First 4 bytes of encrypted data are its real length minus padding
+    qint64 realDataLength = MIN( bytesToInt(data), data.length() );
+    data.remove(0, 4);
+    data.resize(realDataLength);
+
+    return data;
 }
 
 // read & write strings
@@ -150,18 +186,12 @@ bool writeString(QString str, bool encrypt) {
         return writeDataUnencrypted(str.toUtf8());
 }
 QString readString(bool decrypt) {
-    QByteArray bytes(BLOCK_SIZE, 0);
-
-    int result;
+    QByteArray data;
     if(decrypt)
-        result = readDataEncrypted(&bytes);
+        data = readDataEncrypted();
     else
-        result = readDataUnencrypted(&bytes);
-
-    if(result == BLOCK_SIZE)
-        return QString(bytes);
-    else
-        return QString("");
+        data = readDataUnencrypted();
+    return QString::fromUtf8(data);
 }
 
 }

@@ -97,7 +97,8 @@ bool AbstractedServer::bluetoothServerListen()
         qInfo() << "Unable to start bluetooth server.\n";
         return false;
     }
-    else if(serviceInfo.isRegistered() == false) {
+
+    if(serviceInfo.isRegistered() == false) {
         if( !registerBluetoothService() ) {
             qInfo() << "Couldn't register service";
             return false;
