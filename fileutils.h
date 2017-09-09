@@ -2,11 +2,12 @@
 #define FILEUTILS_H
 
 #include <QDir>
+#include <QString>
 
 namespace FileUtils
 {
     void fileManagerCommand(QString command);
-    void sendScreenJPG(int quality);
+    void sendScreenJPG(QString opts);
 }
 
 #endif // FILEUTILS_H

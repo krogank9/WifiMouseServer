@@ -12,6 +12,7 @@
 #include <QGuiApplication>
 #include <QBuffer>
 #include <QDebug>
+#include <QRect>
 
 using namespace SocketUtils;
 
@@ -302,17 +303,35 @@ void fileManagerCommand(QString command)
     }
 }
 
-void sendScreenJPG(int quality)
+void sendScreenJPG(QString opts)
 {
-    QScreen *screen = QGuiApplication::primaryScreen();
-    QByteArray jpgBytes;
-    QPixmap screenshot = screen->grabWindow(0);
+    QStringList optList = opts.split(" ");
+    int quality = optList.at(0).toInt();
+    QRect cropRect;
+    bool cropped = false;
+    if(optList.length() == 5) {
+        cropped = true;
+        cropRect.setX(optList.at(1).toInt());
+        cropRect.setY(optList.at(2).toInt());
+        cropRect.setWidth(optList.at(3).toInt());
+        cropRect.setHeight(optList.at(4).toInt());
+    }
 
+    QScreen *screen = QGuiApplication::primaryScreen();
+    QPixmap screenshot = screen->grabWindow(0);
+    if(cropped) {
+        screenshot = screenshot.copy(cropRect);
+        qInfo() << "quality" << quality;
+    }
+    QByteArray jpgBytes;
     QBuffer buffer(&jpgBytes);
     buffer.open(QIODevice::WriteOnly);
-    screenshot.save(&buffer, "JPG", quality);
+    if(quality >= 95)
+        screenshot.save(&buffer, "PNG", 100);
+    else
+        screenshot.save(&buffer, "JPG", quality);
 
-    qInfo() << "Sending screen" << quality << "size" << buffer.size();
+    //qInfo() << "Sending screen" << quality << "x/y" << cropRect.width() << "/" << cropRect.height();
 
     writeDataEncrypted(jpgBytes);
 }

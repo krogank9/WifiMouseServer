@@ -111,7 +111,6 @@ void NetworkThread::startInputLoop()
         }
 
         QString message = readString(true);
-        qInfo() << message;
 
         bool zoomEvent = false;
 
@@ -173,7 +172,7 @@ void NetworkThread::startInputLoop()
             FileUtils::fileManagerCommand(message);
         } else if(message.startsWith("ScreenMirror ")) {
             message = message.remove("ScreenMirror ");
-            FileUtils::sendScreenJPG( message.toInt() );
+            FileUtils::sendScreenJPG( message );
         }
 
         if(!zoomEvent)

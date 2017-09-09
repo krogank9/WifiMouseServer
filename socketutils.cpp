@@ -151,7 +151,6 @@ QByteArray readDataUnencrypted() {
     if( readAllData(&dataLengthBytes) == false )
         return QByteArray();
     int dataLength = bytesToInt(dataLengthBytes);
-    qInfo() << "dataLength" << dataLength;
 
     // Read data
     QByteArray data(dataLength, 0);
