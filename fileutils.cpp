@@ -320,18 +320,20 @@ void sendScreenJPG(QString opts)
     QScreen *screen = QGuiApplication::primaryScreen();
     QPixmap screenshot = screen->grabWindow(0);
     if(cropped) {
-        screenshot = screenshot.copy(cropRect);
-        qInfo() << "quality" << quality;
+        QPainter painterFrame(&screenshot);
+        painterFrame.setCompositionMode(QPainter::CompositionMode_Source);
+        painterFrame.fillRect(0, 0, cropRect.left(), screenshot.height(), Qt::white); // left
+        painterFrame.fillRect(0, 0, screenshot.width(), cropRect.top(), Qt::white); // top
+        painterFrame.fillRect(cropRect.right(), 0, screenshot.width() - cropRect.right(), screenshot.height(), Qt::white); // right
+        painterFrame.fillRect(0, cropRect.bottom(), screenshot.width(), screenshot.height() - cropRect.bottom(), Qt::white); // bottom
+        painterFrame.end();
     }
     QByteArray jpgBytes;
     QBuffer buffer(&jpgBytes);
     buffer.open(QIODevice::WriteOnly);
-    if(quality >= 95)
-        screenshot.save(&buffer, "PNG", 100);
-    else
-        screenshot.save(&buffer, "JPG", quality);
+    screenshot.save(&buffer, "JPG", quality);
 
-    //qInfo() << "Sending screen" << quality << "x/y" << cropRect.width() << "/" << cropRect.height();
+    qInfo() << "quality" << quality;
 
     writeDataEncrypted(jpgBytes);
 }

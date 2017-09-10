@@ -9,6 +9,7 @@ void keyDown(QString key);
 void keyUp(QString key);
 void keyTap(QString key);
 void mouseMove(int addX, int addY);
+void mouseSetPos(int x, int y);
 void mouseDown(int button);
 void mouseUp(int button);
 void mouseScroll(int amount);

@@ -128,6 +128,13 @@ void NetworkThread::startInputLoop()
             int x = ((QString)coords.at(0)).toInt();
             int y = ((QString)coords.at(1)).toInt();
             FakeInput::mouseMove(x,y);
+        }
+        else if(message.startsWith("MouseSetPos ")) {
+            message.remove("MouseSetPos ");
+            QStringList coords = message.split(",");
+            int x = ((QString)coords.at(0)).toInt();
+            int y = ((QString)coords.at(1)).toInt();
+            FakeInput::mouseSetPos(x,y);
         } else if(message.startsWith("MouseScroll ")) {
             message.remove("MouseScroll ");
             FakeInput::mouseScroll( message.toInt() );
@@ -174,11 +181,11 @@ void NetworkThread::startInputLoop()
             message = message.remove("ScreenMirror ");
             FileUtils::sendScreenJPG( message );
         }
+        else if(message == "Quit")
+            break;
 
         if(!zoomEvent)
             FakeInput::stopZoom();
-
-        if(message == "Quit")
-            return;
     }
+    FakeInput::stopZoom();
 }

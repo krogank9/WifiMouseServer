@@ -81,6 +81,10 @@ void mouseMove(int addX, int addY) {
 	xdo_move_mouse_relative(xdoInstance, addX, addY);
 }
 
+void mouseSetPos(int x, int y) {
+    xdo_move_mouse(xdoInstance, x, y, 0);
+}
+
 void mouseDown(int button) {
 	xdo_mouse_down(xdoInstance, CURRENTWINDOW, button);
 }
