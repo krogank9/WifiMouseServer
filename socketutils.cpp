@@ -1,12 +1,27 @@
 #include "socketutils.h"
 #include "encryptutils.h"
+#include "abstractedserver.h"
 #include <QEventLoop>
 #include <QTime>
 #include <QDebug>
 #include <QTextCodec>
 
+extern "C" {
+    #include <ctime>
+}
+
 qint64 MIN(qint64 a, qint64 b) {
     return a<b?a:b;
+}
+qint64 MAX(qint64 a, qint64 b) {
+    return a>b?a:b;
+}
+
+void sleepMS(qint64 ms) {
+    struct timespec ts;
+    ts.tv_sec = 0;
+    ts.tv_nsec = ms * 10000;
+    nanosleep(&ts, NULL);
 }
 
 QByteArray intToBytes(unsigned int n) {
@@ -60,7 +75,10 @@ bool waitForBytesWritten(int msecs)
     QEventLoop eventLoop;
     QTime stopWatch;
     stopWatch.start();
+
+    eventLoop.processEvents();
     while(stopWatch.elapsed() < msecs && socket->bytesToWrite() && socket->isOpen()) {
+        sleepMS(50); // sleep so loop doesn't take 100% cpu
         eventLoop.processEvents();
     }
     return socket->bytesToWrite() == false;
@@ -70,7 +88,10 @@ bool waitForReadyRead(int msecs)
     QEventLoop eventLoop;
     QTime stopWatch;
     stopWatch.start();
+
+    eventLoop.processEvents();
     while(stopWatch.elapsed() < msecs && socket->bytesAvailable() == false && socket->isOpen()) {
+        sleepMS(50); // sleep so loop doesn't take 100% cpu
         eventLoop.processEvents();
     }
     return bytesAvailable();
@@ -167,12 +188,18 @@ QByteArray readDataEncrypted() {
 
     sessionIV = ( sessionIV + 1 ) % JAVA_INT_MAX_VAL;
     QByteArray iv = EncryptUtils::makeHash16(QString::number(sessionIV).toUtf8());
-    data = EncryptUtils::decryptBytes(data, sessionPasswordHash, iv);
+
+    if(data.size() % 16 == 0)
+        data = EncryptUtils::decryptBytes(data, sessionPasswordHash, iv);
+    else
+        return data;
 
     // First 4 bytes of encrypted data are its real length minus padding
-    qint64 realDataLength = MIN( bytesToInt(data), data.length() );
-    data.remove(0, 4);
-    data.resize(realDataLength);
+    qint64 realDataLength = MAX( MIN( bytesToInt(data), data.length() - 4 ), 0 );
+    if(data.size() >= 4) {
+        data.remove(0, 4);
+        data.resize(realDataLength);
+    }
 
     return data;
 }

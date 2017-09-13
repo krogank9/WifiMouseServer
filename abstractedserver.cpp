@@ -1,4 +1,5 @@
 #include "abstractedserver.h"
+#include "socketutils.h"
 #include <QEventLoop>
 #include <QTime>
 #include <QBluetoothSocket>
@@ -122,8 +123,15 @@ void AbstractedServer::listenWithTimeout(qint16 timeoutMs)
     trySetupServers();
     QTime stopWatch;
     stopWatch.start();
+    eventLoop.processEvents();
     while(stopWatch.elapsed() < timeoutMs && pendingSocket == 0) {
+        sleepMS(50);
         eventLoop.processEvents();
+
+        if(tcpServer.hasPendingConnections())
+            newTcpConnection();
+        else if(bluetoothServer.hasPendingConnections())
+            newBluetoothConnection();
     }
 }
 

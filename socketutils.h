@@ -6,6 +6,8 @@
 #define CHUNK_SIZE 512
 #define JAVA_INT_MAX_VAL 2147483647
 
+void sleepMS(qint64 ms);
+
 namespace SocketUtils
 {
 
