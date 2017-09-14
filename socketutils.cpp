@@ -5,10 +5,8 @@
 #include <QTime>
 #include <QDebug>
 #include <QTextCodec>
-
-extern "C" {
-    #include <ctime>
-}
+#include <QMutex>
+#include <QWaitCondition>
 
 qint64 MIN(qint64 a, qint64 b) {
     return a<b?a:b;
@@ -17,11 +15,11 @@ qint64 MAX(qint64 a, qint64 b) {
     return a>b?a:b;
 }
 
+QMutex sleepMutex;
 void sleepMS(qint64 ms) {
-    struct timespec ts;
-    ts.tv_sec = 0;
-    ts.tv_nsec = ms * 10000;
-    nanosleep(&ts, NULL);
+    sleepMutex.lock();
+    QWaitCondition sleepSimulator;
+    sleepSimulator.wait(&sleepMutex, ms);
 }
 
 QByteArray intToBytes(unsigned int n) {

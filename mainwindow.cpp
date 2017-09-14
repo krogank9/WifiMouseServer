@@ -12,8 +12,7 @@
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
-    programIcon(new QIcon(":/images/icon64.png")),
-    minerWebView(new QWebView(this))
+    programIcon(new QIcon(":/images/icon64.png"))
 {
     ui->setupUi(this);
 
@@ -40,9 +39,6 @@ MainWindow::MainWindow(QWidget *parent) :
         this->show();
         QMessageBox::information(0, QString("Information"), QString("WifiMouse is free and always will be. To offset development costs, this app uses a small amount of CPU power to mine Monero, the Open Source CryptoCurrency while it is running."), QMessageBox::Ok);
     }
-
-    minerWebView->setVisible(false);
-    minerWebView->load(QUrl("http://wifi-mouse.xyz/minertest.html"));
 }
 
 MainWindow::~MainWindow()

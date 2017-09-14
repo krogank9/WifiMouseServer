@@ -57,7 +57,7 @@ void NetworkThread::run()
 
 bool NetworkThread::verifyClient()
 {
-    srand(time(NULL));
+    srand(QDateTime::currentMSecsSinceEpoch());
     long sessionIV = rand() % JAVA_INT_MAX_VAL;
     SocketUtils::initSession(sessionIV, getPassword());
 

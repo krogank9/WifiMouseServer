@@ -73,7 +73,7 @@ void open(QString name)
         dir.cd(file.fileName());
     }
     else {
-        QDesktopServices::openUrl( QUrl("file://" + file.absoluteFilePath()) );
+        QDesktopServices::openUrl( QUrl::fromLocalFile(file.absoluteFilePath()) );
     }
 
     writeString("Success", true);

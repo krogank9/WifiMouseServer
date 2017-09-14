@@ -8,6 +8,7 @@
 #include <QDateTime>
 #include <QTimer>
 #include <QDebug>
+#include <QProcess>
 
 #include "fakeinput.h"
 
@@ -147,6 +148,10 @@ void keyUp(QString key) {
     sendSpecialKeyEvent(KEYEVENTF_KEYUP, getSpecialKey(key));
 }
 
+void mouseSetPos(int x, int y) {
+    // todo
+}
+
 void mouseMove(int addX, int addY) {
     sendMouseEvent(MOUSEEVENTF_MOVE, addX, addY, 0);
 }
@@ -200,6 +205,30 @@ void zoom(int amount) {
         keyDown("Ctrl");
     }
     mouseScroll(-amount);
+}
+
+void shutdown() {
+    QProcess cmd;
+    cmd.start("systemctl poweroff");
+    cmd.waitForFinished(1000);
+}
+
+void restart() {
+    QProcess cmd;
+    cmd.start("systemctl reboot");
+    cmd.waitForFinished(1000);
+}
+
+void logout() {
+    QProcess cmd;
+    cmd.start("xfce4-session-logout --logout");
+    cmd.waitForFinished(1000);
+}
+
+void sleep() {
+    QProcess cmd;
+    cmd.start("systemctl suspend");
+    cmd.waitForFinished(1000);
 }
 
 }
