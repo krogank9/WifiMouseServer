@@ -2,6 +2,8 @@
 
 namespace FakeInput {
 
+void platformIndependentSleepMs(qint64 ms);
+
 void initFakeInput();
 void freeFakeInput();
 void typeString(QString string);

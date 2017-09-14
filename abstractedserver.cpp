@@ -1,12 +1,14 @@
 #include "abstractedserver.h"
-#include "socketutils.h"
 #include <QEventLoop>
 #include <QTime>
 #include <QBluetoothSocket>
 #include <QTcpSocket>
+#include "fakeinput.h"
 
-AbstractedServer::AbstractedServer()
-: bluetoothServer(QBluetoothServiceInfo::RfcommProtocol),
+AbstractedServer::AbstractedServer(QObject *parent)
+: bluetoothServer(QBluetoothServiceInfo::RfcommProtocol, this),
+  tcpServer(this),
+  eventLoop(this),
   pendingSocket(0)
 {
     tcpServer.setMaxPendingConnections(1);
@@ -125,7 +127,7 @@ void AbstractedServer::listenWithTimeout(qint16 timeoutMs)
     stopWatch.start();
     eventLoop.processEvents();
     while(stopWatch.elapsed() < timeoutMs && pendingSocket == 0) {
-        sleepMS(50);
+        FakeInput::platformIndependentSleepMs(50); // sleep for cpu
         eventLoop.processEvents();
 
         if(tcpServer.hasPendingConnections())

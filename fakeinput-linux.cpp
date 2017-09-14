@@ -3,12 +3,21 @@
 #include <QProcess>
 extern "C" {
 	#include <xdo.h>
+    #include <ctime>
 }
 #include "fakeinput.h"
 
 //note: compile with: gcc main.cpp linux.cpp -lxdo
 
 namespace FakeInput {
+
+void platformIndependentSleepMs(qint64 ms) {
+    const int MS_TO_NANO_MULTIPLIER = 1000000;
+    struct timespec tim;
+    tim.tv_sec = ms/1000;
+    tim.tv_nsec = ((unsigned)ms)*MS_TO_NANO_MULTIPLIER;
+    nanosleep(&tim, NULL);
+}
 
 xdo_t *xdoInstance;
 

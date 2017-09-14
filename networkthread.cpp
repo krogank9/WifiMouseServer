@@ -26,7 +26,7 @@ void NetworkThread::run()
 {
    FakeInput::initFakeInput();
 
-   AbstractedServer server;
+   AbstractedServer server(this);
 
    int count = 0;
    while(true) {

@@ -11,7 +11,7 @@ class AbstractedServer : public QObject
     Q_OBJECT
 
 public:
-    AbstractedServer();
+    explicit AbstractedServer(QObject *parent = 0);
     ~AbstractedServer();
 
     QIODevice *nextPendingConnection();

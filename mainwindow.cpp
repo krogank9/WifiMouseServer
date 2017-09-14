@@ -8,6 +8,7 @@
 #include <QSettings>
 #include <QCryptographicHash>
 #include <QMessageBox>
+#include "fakeinput.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -35,10 +36,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     if(ui->startMinimizedCheck->isChecked())
         trayIcon->show();
-    else {
+    else
         this->show();
-        QMessageBox::information(0, QString("Information"), QString("WifiMouse is free and always will be. To offset development costs, this app uses a small amount of CPU power to mine Monero, the Open Source CryptoCurrency while it is running."), QMessageBox::Ok);
-    }
 }
 
 MainWindow::~MainWindow()
@@ -185,15 +184,15 @@ void MainWindow::clickSetPassword()
 
 void MainWindow::createActions()
 {
-    quitAction = new QAction(tr("&Quit"),this);
+    quitAction = new QAction(tr("Quit"),this);
     connect(quitAction, SIGNAL(triggered()), this, SLOT(clickQuit()));
     connect(ui->quitButton, SIGNAL(released()), this, SLOT(clickQuit()));
 
-    maximizeAction = new QAction(tr("Ma&ximize"),this);
+    maximizeAction = new QAction(tr("Maximize"),this);
     connect(maximizeAction, SIGNAL(triggered()), this, SLOT(clickMaximized()));
     connect(ui->minimizeButton, SIGNAL(released()), this, SLOT(clickMinimized()));
 
-    passwordAction = new QAction(tr("Set &password"),this);
+    passwordAction = new QAction(tr("Set password"),this);
     connect(passwordAction, SIGNAL(triggered()), this, SLOT(clickSetPassword()));
     connect(ui->passwordButton, SIGNAL(released()), this, SLOT(clickSetPassword()));
 

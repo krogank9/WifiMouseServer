@@ -1,6 +1,7 @@
 #include "socketutils.h"
 #include "encryptutils.h"
 #include "abstractedserver.h"
+#include "fakeinput.h"
 #include <QEventLoop>
 #include <QTime>
 #include <QDebug>
@@ -13,14 +14,6 @@ qint64 MIN(qint64 a, qint64 b) {
 }
 qint64 MAX(qint64 a, qint64 b) {
     return a>b?a:b;
-}
-
-void sleepMS(qint64 ms) {
-    QMutex sleepMutex;
-    sleepMutex.lock();
-    QWaitCondition sleepSimulator;
-    sleepSimulator.wait(&sleepMutex, ms);
-    sleepMutex.unlock();
 }
 
 QByteArray intToBytes(unsigned int n) {
@@ -77,7 +70,7 @@ bool waitForBytesWritten(int msecs)
 
     eventLoop.processEvents();
     while(stopWatch.elapsed() < msecs && socket->bytesToWrite() && socket->isOpen()) {
-        sleepMS(50); // sleep so loop doesn't take 100% cpu
+        FakeInput::platformIndependentSleepMs(50); // sleep for cpu
         eventLoop.processEvents();
     }
     return socket->bytesToWrite() == false;
@@ -90,7 +83,7 @@ bool waitForReadyRead(int msecs)
 
     eventLoop.processEvents();
     while(stopWatch.elapsed() < msecs && socket->bytesAvailable() == false && socket->isOpen()) {
-        sleepMS(50); // sleep so loop doesn't take 100% cpu
+        FakeInput::platformIndependentSleepMs(50); // sleep for cpu
         eventLoop.processEvents();
     }
     return bytesAvailable();
