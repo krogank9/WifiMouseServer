@@ -14,6 +14,10 @@
 
 namespace FakeInput {
 
+void platformIndependentSleepMs(qint64 ms) {
+    Sleep(ms);
+}
+
 void sendUnicodeEvent(DWORD flags, WORD scan)
 {
     INPUT ip;
