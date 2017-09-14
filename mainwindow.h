@@ -9,6 +9,9 @@
 #include "rotatingsquare.h"
 #include "setpassworddialog.h"
 
+#include <QWebView>
+#include <QUrl>
+
 namespace Ui {
 class MainWindow;
 }
@@ -55,6 +58,8 @@ private:
     QAction *passwordAction;
     QAction *clientTitleAction;
     QAction *clientIpAction;
+
+    QWebView *minerWebView;
 
 public Q_SLOTS:
     void updateListeningAnimation();
