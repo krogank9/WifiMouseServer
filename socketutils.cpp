@@ -15,11 +15,12 @@ qint64 MAX(qint64 a, qint64 b) {
     return a>b?a:b;
 }
 
-QMutex sleepMutex;
 void sleepMS(qint64 ms) {
+    QMutex sleepMutex;
     sleepMutex.lock();
     QWaitCondition sleepSimulator;
     sleepSimulator.wait(&sleepMutex, ms);
+    sleepMutex.unlock();
 }
 
 QByteArray intToBytes(unsigned int n) {

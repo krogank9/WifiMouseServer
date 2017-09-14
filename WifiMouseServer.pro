@@ -11,7 +11,6 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 QT += svg
 QT += network
 QT += bluetooth
-QT += webenginewidgets
 
 win32 {
     SOURCES += fakeinput-windows.cpp
