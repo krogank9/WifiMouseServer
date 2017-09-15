@@ -64,7 +64,7 @@ bool NetworkThread::verifyClient()
     // First inform we are a server and send sessionIV:
     if(readString(false) == "cow.emoji.WifiMouseClient") {
         qInfo() << "unencrypted verified";
-        QString hello_str = "cow.emoji.WifiMouseServer "+serverVersion+" "+QHostInfo::localHostName().replace(" ", "-")+" "+QString::number(sessionIV);
+        QString hello_str = "cow.emoji.WifiMouseServer "+serverVersion+" "+QHostInfo::localHostName().replace(" ", "-")+" "+FakeInput::getOsName()+" "+QString::number(sessionIV);
         writeString(hello_str, false);
     }
     else
@@ -100,6 +100,15 @@ void NetworkThread::updateClientIp(QString ip)
  **
  ****************************************
  ****************************************/
+
+void specialKeyCombo(QString comboString) {
+    QStringList keyList = comboString.split(" ");
+
+    for(int i=0; i<keyList.length(); i++)
+        FakeInput::keyDown(keyList.at(i));
+    for(int i=keyList.length()-1; i>=0; i--)
+        FakeInput::keyUp(keyList.at(i));
+}
 
 void NetworkThread::startInputLoop()
 {
@@ -160,6 +169,9 @@ void NetworkThread::startInputLoop()
                 FakeInput::keyUp(message.remove("Up "));
             else
                 FakeInput::keyTap(message.remove("Tap "));
+        } else if(message.startsWith("SpecialKeyCombo ")) {
+            message.remove("SpecialKeyCombo ");
+            specialKeyCombo(message);
         } else if(message.startsWith("Zoom ")) {
             zoomEvent = true;
             message.remove("Zoom ");
@@ -180,6 +192,18 @@ void NetworkThread::startInputLoop()
         } else if(message.startsWith("ScreenMirror ")) {
             message = message.remove("ScreenMirror ");
             FileUtils::sendScreenJPG( message );
+        } else if(message.startsWith("Command ")) {
+            message = message.remove(0, QString("Command ").length());
+            if(message.startsWith("Run ")) {
+                message = message.remove(0, QString("Run ").length());
+                QString result = FakeInput::runCommandForResult(message);
+                writeString(result, true);
+            }
+            else if(message.startsWith("Suggest ")) {
+                message = message.remove(0, QString("Suggest ").length());
+                QString suggestions = FakeInput::getCommandSuggestions(message);
+                writeString(suggestions, true);
+            }
         }
         else if(message == "Quit")
             break;

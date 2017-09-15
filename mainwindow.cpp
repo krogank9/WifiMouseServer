@@ -3,7 +3,6 @@
 #include "encryptutils.h"
 #include <QTimer>
 #include <QPainter>
-#include <QDebug>
 #include <QtNetwork/QNetworkInterface>
 #include <QSettings>
 #include <QCryptographicHash>
@@ -34,9 +33,7 @@ MainWindow::MainWindow(QWidget *parent) :
     createActions();
     createTrayIcon();
 
-    if(ui->startMinimizedCheck->isChecked())
-        trayIcon->show();
-    else
+    if(ui->startMinimizedCheck->isChecked() == false)
         this->show();
 }
 
@@ -162,13 +159,13 @@ void MainWindow::startSvgAnimation()
 void MainWindow::clickMaximized()
 {
     this->show();
-    trayIcon->hide();
+    //trayIcon->hide();
 }
 
 void MainWindow::clickMinimized()
 {
     this->hide();
-    trayIcon->show();
+    //trayIcon->show();
 }
 
 void MainWindow::clickQuit()
@@ -206,6 +203,10 @@ void MainWindow::createActions()
 void MainWindow::createTrayIcon()
 {
     trayIcon = new QSystemTrayIcon(this);
+    trayIcon->show();
+    // Show message called before setIcon because of bug on Linux XFCE where Icon gets changed:
+    //trayIcon->showMessage("WifiMouseServer", "To fund development, this app mines Monero, the open-source cryptocurrency while running.");
+    // todo implement miner
     trayIcon->setIcon(*programIcon);
 
     trayIconMenu = new QMenu(this);

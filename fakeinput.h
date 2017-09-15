@@ -3,6 +3,10 @@
 namespace FakeInput {
 
 void platformIndependentSleepMs(qint64 ms);
+QString getOsName();
+
+QString getCommandSuggestions(QString command);
+QString runCommandForResult(QString command);
 
 void initFakeInput();
 void freeFakeInput();
