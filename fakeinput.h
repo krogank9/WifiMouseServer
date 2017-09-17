@@ -5,8 +5,15 @@ namespace FakeInput {
 void platformIndependentSleepMs(qint64 ms);
 QString getOsName();
 
+QString getApplicationNames();
+void startApplicationByName(QString name);
+
 QString getCommandSuggestions(QString command);
 QString runCommandForResult(QString command);
+QString getCpuUsage();
+QString getRamUsage();
+QString getProcesses();
+void killProcess(QString pid);
 
 void initFakeInput();
 void freeFakeInput();
@@ -26,5 +33,7 @@ void shutdown();
 void restart();
 void logout();
 void sleep();
+void lock_screen();
+void blank_screen();
 
 }

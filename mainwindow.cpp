@@ -204,9 +204,6 @@ void MainWindow::createTrayIcon()
 {
     trayIcon = new QSystemTrayIcon(this);
     trayIcon->show();
-    // Show message called before setIcon because of bug on Linux XFCE where Icon gets changed:
-    //trayIcon->showMessage("WifiMouseServer", "To fund development, this app mines Monero, the open-source cryptocurrency while running.");
-    // todo implement miner
     trayIcon->setIcon(*programIcon);
 
     trayIconMenu = new QMenu(this);

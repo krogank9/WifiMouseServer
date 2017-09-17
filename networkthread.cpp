@@ -186,6 +186,10 @@ void NetworkThread::startInputLoop()
                 FakeInput::sleep();
             else if(message == "Logout")
                 FakeInput::logout();
+            else if(message == "Blank")
+                FakeInput::blank_screen();
+            else if(message == "Lock")
+                FakeInput::lock_screen();
         } else if(message.startsWith("FileManager ")) {
             message = message.remove(0, QString("FileManager ").length());
             FileUtils::fileManagerCommand(message);
@@ -204,6 +208,14 @@ void NetworkThread::startInputLoop()
                 QString suggestions = FakeInput::getCommandSuggestions(message);
                 writeString(suggestions, true);
             }
+        }
+        else if(message == "GetApplications") {
+            writeString(FakeInput::getApplicationNames(), true);
+        }
+        else if(message == "StartApplication ") {
+            message = message.remove(0, QString("StartApplication ").length());
+            qInfo() << message;
+            FakeInput::startApplicationByName(message);
         }
         else if(message == "Quit")
             break;

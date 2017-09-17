@@ -70,7 +70,7 @@ bool waitForBytesWritten(int msecs)
 
     eventLoop.processEvents();
     while(stopWatch.elapsed() < msecs && socket->bytesToWrite() && socket->isOpen()) {
-        FakeInput::platformIndependentSleepMs(50); // sleep for cpu
+        FakeInput::platformIndependentSleepMs(10); // sleep for cpu
         eventLoop.processEvents();
     }
     return socket->bytesToWrite() == false;
@@ -83,7 +83,7 @@ bool waitForReadyRead(int msecs)
 
     eventLoop.processEvents();
     while(stopWatch.elapsed() < msecs && socket->bytesAvailable() == false && socket->isOpen()) {
-        FakeInput::platformIndependentSleepMs(50); // sleep for cpu
+        FakeInput::platformIndependentSleepMs(10); // sleep for cpu
         eventLoop.processEvents();
     }
     return bytesAvailable();

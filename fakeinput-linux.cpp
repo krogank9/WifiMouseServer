@@ -2,6 +2,8 @@
 #include <QSet>
 #include <QStringList>
 #include <QProcess>
+#include <QDateTime>
+#include <QDebug>
 extern "C" {
     #include <xdo.h>
     #include <ctime>
@@ -25,13 +27,22 @@ void platformIndependentSleepMs(qint64 ms) {
     tim.tv_sec = ms/1000;
     tim.tv_nsec = ((unsigned)ms)*MS_TO_NANO_MULTIPLIER;
     nanosleep(&tim, NULL);
+}
 
-    desktopSession = runCommandForResult("echo $DESKTOP_SESSION").simplified();
+QString runCommandForResult(QString command) {
+    QProcess cmd;
+    // trick to startDetached process and still read its output, use sh.
+    // does not work with bash
+    cmd.start("/bin/sh", QStringList()<< "-c" << command);
+    cmd.waitForFinished(250);
+    return cmd.readAllStandardOutput() + cmd.readAllStandardError();
 }
 
 xdo_t *xdoInstance;
 
 void initFakeInput() {
+    desktopSession = runCommandForResult("echo $DESKTOP_SESSION").simplified();
+    qInfo() << "desktopSession" << desktopSession;
     xdoInstance = xdo_new(0);
 }
 
@@ -137,64 +148,62 @@ void zoom(int amount) {
 }
 
 void shutdown() {
-    QProcess cmd;
-    cmd.start("systemctl poweroff");
-    cmd.waitForFinished(1000);
+    runCommandForResult("systemctl poweroff");
 }
 
 void restart() {
-    QProcess cmd;
-    cmd.start("systemctl reboot");
-    cmd.waitForFinished(1000);
+    runCommandForResult("systemctl reboot");
 }
 
 void logout() {
-    QProcess cmd;
     if(desktopSession == "cinnamon")
-        cmd.start("cinnamon-session-quit --logout --force");
+        runCommandForResult("cinnamon-session-quit --logout --force");
     else if(desktopSession == "xubuntu")
-        cmd.start("xfce4-session-logout --logout");
+        runCommandForResult("xfce4-session-logout --logout");
     else
-        cmd.start("gnome-session-quit");
-
-    cmd.waitForFinished(1000);
+        runCommandForResult("gnome-session-quit");
 }
 
 void sleep() {
-    QProcess cmd;
-    cmd.start("systemctl suspend");
-    cmd.waitForFinished(1000);
+    runCommandForResult("systemctl suspend");
 }
 
-// To get list of application names separated by \n:
-// grep -LEs "NoDisplay|OnlyShowIn" /usr/share/applications/* | grep ".*.desktop" | xargs grep -hm 1 "^Name=" | sed 's/^.....//'
-// To get the shell command for program name:
-// grep -rlhe "LibreOffice" /usr/share/applications/* | xargs grep -he "^Exec=" | sed 's/^.....//' | grep -m 1 ""
-QString runCommandForResult(QString command)
-{
-    QProcess cmd;
-    // trick to startDetached process and still read its output, use sh
-    cmd.start("/bin/sh", QStringList()<< "-c" << command);
-    cmd.waitForFinished(250);
-    return cmd.readAllStandardOutput() + cmd.readAllStandardError();
+void lock_screen() {
+    qInfo() << desktopSession;
+    if(desktopSession == "cinnamon")
+        runCommandForResult("cinnamon-screensaver-command -l");
+    else if(desktopSession == "xubuntu")
+        runCommandForResult("xflock4");
+    else
+        runCommandForResult("gnome-screensaver-command -l");
+}
+
+void blank_screen() {
+    runCommandForResult("xset dpms force off");
+}
+
+QString getApplicationNames() {
+    return runCommandForResult("grep -LEs 'NoDisplay|OnlyShowIn' /usr/share/applications/* | grep '.*.desktop' | xargs grep -hm 1 '^Name=' | sed 's/^.....//'");
+}
+
+void startApplicationByName(QString name) {
+    QString shellCommand = runCommandForResult("grep -rlhe '"+name+"' /usr/share/applications/* | xargs grep -he '^Exec=' | sed 's/^.....//' | grep -m 1 ''");
+    runCommandForResult(shellCommand);
 }
 
 QString getCommandSuggestions(QString command)
 {
-    QProcess cmd1;
-    command.replace("\"","\\\"");
-    cmd1.start("/bin/sh", QStringList()<< "-c" << "grep \"^"+command+"\" ~/.bash_history");
-    cmd1.waitForFinished(250);
-    QString history_results = cmd1.readAllStandardOutput();
+    command = command.replace("\"","\\\"");
+    QString history_results = runCommandForResult("grep \"^"+command+"\" ~/.bash_history");
 
-    QProcess cmd2;
-    cmd2.start("/bin/bash", QStringList()<< "-c" << "compgen -c | grep \"^"+command+"\"");
-    cmd2.waitForFinished(250);
-    QString compgen_results = cmd2.readAllStandardOutput();
+    QProcess cmd; // compgen (list commands) only works in bash
+    cmd.start("/bin/bash", QStringList()<< "-c" << ("compgen -c | grep \"^"+command+"\""));
+    cmd.waitForFinished(250);
+    QString compgen_results = cmd.readAllStandardOutput();
 
     QStringList list = compgen_results.split("\n") + history_results.split("\n");
-    for(int i=0; i<list.count(); i++) // remove trailing whitespace
-        list[i] = list[i].simplified();
+    for(int i=0; i<list.count(); i++)
+        list[i] = list[i].simplified(); // remove trailing whitespace
     list = list.toSet().toList(); // remove duplicates
     for(int i=0; i<list.count(); i++) { // sort by length
         for(int j=0; j<i; j++) {
@@ -211,9 +220,55 @@ QString getCommandSuggestions(QString command)
         }
     }
 
-    //qInfo() << list.join("\n");
-
     return list.join("\n");
+}
+
+QString getCpuUsage() {
+    static QList< QList<int> > lastCpuUsage;
+    QList< QList<int> > curCpuUsage;
+    QString procStat = runCommandForResult("grep 'cpu[0-9]' /proc/stat | awk '{print $2,$4,$5}'");
+
+    foreach( const QString coreInfo, procStat.split("\n") ) {
+        QStringList usageTime = coreInfo.split(" ");
+        if(usageTime.count() != 3)
+            continue;
+
+        // proc/stat command returned cpu info in following format:
+        // time spent in user mode / time spent in system mode / total time spent
+        curCpuUsage.append(QList<int>() << (usageTime[0].toInt() + usageTime[1].toInt()) << usageTime[2].toInt());
+    }
+
+    QStringList cpuPercentages;
+    for(int i=0; i<curCpuUsage.count() && i<lastCpuUsage.count(); i++) {
+        qint64 lastCheckTime = lastCpuUsage[i][1];
+        qint64 curCheckTime = curCpuUsage[i][1];
+        qint64 timePassed = curCheckTime - lastCheckTime;
+
+        qint64 lastUsedTotal = lastCpuUsage[i][0];
+        qint64 curUsedTotal = curCpuUsage[i][1];
+        qint64 timeUsed = curUsedTotal - lastUsedTotal;
+
+        qint64 percentOfTimeUsed = (timeUsed/timePassed) * 100;
+
+        cpuPercentages.append(QString::number(percentOfTimeUsed));
+    }
+
+    lastCpuUsage = curCpuUsage;
+    return cpuPercentages.join(" ");
+}
+
+QString getRamUsage() {
+    // used / total
+    return runCommandForResult("free | grep '^Mem' | awk '{print $3,$2}'");
+}
+
+QString getProcesses() {
+    // pid / cpu / mem / name
+    return runCommandForResult("ps ux | awk '{print $2,$3,$4,$11}'");
+}
+
+void killProcess(QString pid) {
+    runCommandForResult("kill "+pid);
 }
 
 }
