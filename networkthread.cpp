@@ -212,10 +212,22 @@ void NetworkThread::startInputLoop()
         else if(message == "GetApplications") {
             writeString(FakeInput::getApplicationNames(), true);
         }
-        else if(message == "StartApplication ") {
+        else if(message.startsWith("StartApplication ")) {
             message = message.remove(0, QString("StartApplication ").length());
             qInfo() << message;
             FakeInput::startApplicationByName(message);
+        }
+        else if(message == "GetCpuUsage") {
+            writeString(FakeInput::getCpuUsage(), true);
+        }
+        else if(message == "GetRamUsage") {
+            writeString(FakeInput::getRamUsage(), true);
+        }
+        else if(message == "GetTasks") {
+            writeString(FakeInput::getProcesses(), true);
+        }
+        else if(message == "KillPID") {
+            FakeInput::killProcess(message.remove("KillPID"));
         }
         else if(message == "Quit")
             break;

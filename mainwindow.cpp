@@ -153,7 +153,7 @@ void MainWindow::startSvgAnimation()
 
     QTimer *logoTimer = new QTimer(this);
     connect(logoTimer, SIGNAL(timeout()), this, SLOT(updateLogoAnimation()));
-    logoTimer->start(20);//60fps
+    logoTimer->start(10);//120fps to ensure smooth animation
 }
 
 void MainWindow::clickMaximized()

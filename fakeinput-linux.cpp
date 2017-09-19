@@ -193,7 +193,10 @@ void startApplicationByName(QString name) {
 
 QString getCommandSuggestions(QString command)
 {
-    command = command.replace("\"","\\\"");
+    for(int i=0; i<command.length(); i++)
+        if(command.at(i) == QString("\"") && (i == 0 || command.at(i - 1) != QString("\\")))
+            command.replace(i, 1, "\\\""); // escape unescaped double quotes for grep
+
     QString history_results = runCommandForResult("grep \"^"+command+"\" ~/.bash_history");
 
     QProcess cmd; // compgen (list commands) only works in bash
@@ -234,21 +237,25 @@ QString getCpuUsage() {
             continue;
 
         // proc/stat command returned cpu info in following format:
-        // time spent in user mode / time spent in system mode / total time spent
+        // time spent in user mode / time spent in system mode / idle time
+        // appends ( total processing time, total idle time )
         curCpuUsage.append(QList<int>() << (usageTime[0].toInt() + usageTime[1].toInt()) << usageTime[2].toInt());
     }
 
     QStringList cpuPercentages;
     for(int i=0; i<curCpuUsage.count() && i<lastCpuUsage.count(); i++) {
-        qint64 lastCheckTime = lastCpuUsage[i][1];
-        qint64 curCheckTime = curCpuUsage[i][1];
+        qint64 lastCheckTime = lastCpuUsage[i][0] + lastCpuUsage[i][1];
+        qint64 curCheckTime = curCpuUsage[i][0] + curCpuUsage[i][1];
         qint64 timePassed = curCheckTime - lastCheckTime;
 
+        if(timePassed == 0)
+            return "";
+
         qint64 lastUsedTotal = lastCpuUsage[i][0];
-        qint64 curUsedTotal = curCpuUsage[i][1];
+        qint64 curUsedTotal = curCpuUsage[i][0];
         qint64 timeUsed = curUsedTotal - lastUsedTotal;
 
-        qint64 percentOfTimeUsed = (timeUsed/timePassed) * 100;
+        qint64 percentOfTimeUsed = ((float)timeUsed/(float)timePassed) * 100.0f;
 
         cpuPercentages.append(QString::number(percentOfTimeUsed));
     }
@@ -259,7 +266,7 @@ QString getCpuUsage() {
 
 QString getRamUsage() {
     // used / total
-    return runCommandForResult("free | grep '^Mem' | awk '{print $3,$2}'");
+    return runCommandForResult("free | grep '^Mem' | awk '{print $3,$2}'").simplified();
 }
 
 QString getProcesses() {
