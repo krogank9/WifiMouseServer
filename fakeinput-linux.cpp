@@ -188,6 +188,8 @@ QString getApplicationNames() {
 
 void startApplicationByName(QString name) {
     QString shellCommand = runCommandForResult("grep -rlhe '"+name+"' /usr/share/applications/* | xargs grep -he '^Exec=' | sed 's/^.....//' | grep -m 1 ''");
+    if(shellCommand.indexOf(' ') >= 0)
+        shellCommand = shellCommand.mid(0, shellCommand.indexOf(' '));
     runCommandForResult(shellCommand);
 }
 
@@ -271,7 +273,7 @@ QString getRamUsage() {
 
 QString getProcesses() {
     // pid / cpu / mem / name
-    return runCommandForResult("ps ux | awk '{print $2,$3,$4,$11}'");
+    return runCommandForResult("ps ux | awk '{print $2,$3,$4,$11}' | tail -n +2");
 }
 
 void killProcess(QString pid) {

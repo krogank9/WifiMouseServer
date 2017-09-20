@@ -226,8 +226,10 @@ void NetworkThread::startInputLoop()
         else if(message == "GetTasks") {
             writeString(FakeInput::getProcesses(), true);
         }
-        else if(message == "KillPID") {
-            FakeInput::killProcess(message.remove("KillPID"));
+        else if(message.startsWith("KillPID")) {
+            message = message.remove("KillPID");
+            qInfo() << "Killing PID" << message;
+            FakeInput::killProcess(message);
         }
         else if(message == "Quit")
             break;
