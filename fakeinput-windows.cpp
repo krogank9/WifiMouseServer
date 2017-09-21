@@ -15,8 +15,12 @@
 #include <QTimer>
 #include <QDebug>
 #include <QProcess>
+#include <QStandardPaths>
+#include <QDir>
+#include <QList>
 
 #include "fakeinput.h"
+#include "stdlib.h"
 
 QMap<QString, WORD> virtualKeyList {
     {"Return", VK_RETURN}, {"BackSpace", VK_BACK}, {"Ctrl", VK_CONTROL},
@@ -42,6 +46,42 @@ QMap<QString, WORD> virtualKeyList {
     {"s", 0x53}, {"t", 0x54}, {"u", 0x55}, {"v", 0x56}, {"w", 0x57}, {"x", 0x58},
     {"y", 0x59}, {"z", 0x5a}
 };
+
+QList<QFileInfo> recurseAndGetShortcutList(QDir dir, int recursions = 0) {
+    QList<QFileInfo> lnkList;
+    QFileInfoList dirInfoList = dir.entryInfoList();
+    for(int i=0; i<dirInfoList.length(); i++) {
+        QFileInfo info = dirInfoList.at(i);
+        if(info.isDir()) {
+            QDir recurDir(info.absoluteFilePath());
+            if(recurDir.absolutePath() != dir.absolutePath()
+            && recurDir.absolutePath().startsWith(dir.absolutePath())
+            // don't search nested start menu folders
+            && !recurDir.absolutePath().contains(QRegExp("/Roaming/Microsoft/Windows/Start Menu/Programs/.*/.*/"))) {
+                lnkList.append(recurseAndGetShortcutList(recurDir, recursions+1));
+            }
+        }
+        else if(info.isFile()) {
+            if(info.suffix() == "lnk"
+            && !info.absoluteFilePath().contains("/Roaming/Microsoft/Windows/Recent/")
+            && !info.absoluteFilePath().contains("/Roaming/Microsoft/Windows/SendTo/"))
+                lnkList.append(info);
+        }
+    }
+    return lnkList;
+}
+
+QString getProgramsList() {
+    QDir dir(QDir::home().absolutePath() + "/AppData/Roaming");
+    QList<QFileInfo> exes = recurseAndGetShortcutList(dir);
+    QString programsList;
+    for(int i=0; i<exes.size(); i++) {
+        if(i != 0)
+            programsList += "\n";
+        programsList += exes.at(i).absoluteFilePath();
+    }
+    return programsList;
+}
 
 namespace FakeInput {
 
@@ -188,7 +228,7 @@ void keyUp(QString key) {
 }
 
 void mouseSetPos(int x, int y) {
-    // todo
+    sendMouseEvent(MOUSEEVENTF_ABSOLUTE, x, y, 0);
 }
 
 void mouseMove(int addX, int addY) {
@@ -275,8 +315,34 @@ QString getCommandSuggestions(QString command)
     return "assoc\nat\nattrib\nbootcfg\ncd\nchkdsk\ncls\ncopy\ndel\ndir\ndiskpart\ndriverquery\necho\nexit\nfc\nfind\nfindstr\nfor\nfsutil\nftype\ngetmac\ngoto\nif\nipconfig\nmd\nmore\nmove\nnet\nnetsh\nnetstat\npath\npathping\npause\nping\npopd\npowercfg\nreg\nrmdir\nren\nsc\nschtasks\nset\nsfc\nshutdown\nsort\nstart\nsubst\nsysteminfo\ntaskkill\ntasklist\ntree\ntype\nvssadmin\nxcopy";
 }
 
-QString getApplicationNames() { return ""; }
-void startApplicationByName(QString name) {}
+QString lastApplicationsList;
+QString getApplicationNames() {
+    lastApplicationsList = getProgramsList();
+    QStringList sorted = lastApplicationsList.split("\n");
+    // Remove file extensions & prefix
+    for(int i=0; i<sorted.size(); i++) {
+        QString cur = sorted.at(i);
+        cur = cur.mid(cur.lastIndexOf("/")+1);
+        cur = cur.mid(0, cur.indexOf("."));
+        sorted[i] = cur;
+    }
+    // Sort alphabetically
+    for(int i=0; i<sorted.size()-1; i++)
+        for(int j=i+1; j<sorted.size(); j++)
+            if(sorted.at(i) > sorted.at(j))
+                sorted.swap(i, j);
+    return sorted.join("\n");
+}
+void startApplicationByName(QString name) {
+    QStringList apps = lastApplicationsList.split("\n");
+    for(int i=0; i<apps.size(); i++) {
+        QString appName = apps.at(i);
+        if(appName.endsWith(name+".lnk")) {
+            std::wstring wstr = appName.toStdWString();
+            ShellExecute(NULL, NULL, wstr.data(), NULL, NULL, SW_NORMAL);
+        }
+    }
+}
 
 QString getCpuUsage() {return "";}
 QString getRamUsage() {return "";}

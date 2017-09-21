@@ -214,7 +214,6 @@ void NetworkThread::startInputLoop()
         }
         else if(message.startsWith("StartApplication ")) {
             message = message.remove(0, QString("StartApplication ").length());
-            qInfo() << message;
             FakeInput::startApplicationByName(message);
         }
         else if(message == "GetCpuUsage") {
