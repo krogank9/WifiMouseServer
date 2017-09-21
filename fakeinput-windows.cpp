@@ -4,8 +4,14 @@
 // is included below.
 #define WINVER 0x0500
 #include <windows.h>
+#ifdef _MSC_VER
+ #pragma comment(lib, "user32.lib")
+#endif
+
+// Note: must compile with MSVC++ 2015
 
 #include <QDateTime>
+#include <QString>
 #include <QTimer>
 #include <QDebug>
 #include <QProcess>
@@ -14,13 +20,25 @@
 
 namespace FakeInput {
 
+QString getOsName() { return "windows"; }
+
 void platformIndependentSleepMs(qint64 ms) {
     Sleep(ms);
+}
+
+QString runCommandForResult(QString command) {
+    QProcess cmd;
+    // trick to startDetached process and still read its output, use sh.
+    // does not work with bash
+    cmd.start("start /B " + command);
+    cmd.waitForFinished(250);
+    return cmd.readAllStandardOutput() + cmd.readAllStandardError();
 }
 
 void sendUnicodeEvent(DWORD flags, WORD scan)
 {
     INPUT ip;
+    ZeroMemory(&ip, sizeof(ip));
     ip.type = INPUT_KEYBOARD;
     ip.ki.time = 0;
     ip.ki.dwFlags = flags;
@@ -34,6 +52,7 @@ void sendUnicodeEvent(DWORD flags, WORD scan)
 void sendSpecialKeyEvent(DWORD flags, WORD key)
 {
     INPUT ip;
+    ZeroMemory(&ip, sizeof(ip));
     ip.type = INPUT_KEYBOARD;
     ip.ki.time = 0;
     ip.ki.dwFlags = flags;
@@ -47,6 +66,7 @@ void sendSpecialKeyEvent(DWORD flags, WORD key)
 void sendMouseEvent(DWORD flags, LONG dx, LONG dy, DWORD mouseData)
 {
     INPUT input;
+    ZeroMemory(&input, sizeof(input));
     input.type = INPUT_MOUSE;
     input.mi.mouseData = mouseData;
     input.mi.dx = dx;
@@ -212,27 +232,41 @@ void zoom(int amount) {
 }
 
 void shutdown() {
-    QProcess cmd;
-    cmd.start("systemctl poweroff");
-    cmd.waitForFinished(1000);
+    runCommandForResult("shutdown -t 0");
 }
 
 void restart() {
-    QProcess cmd;
-    cmd.start("systemctl reboot");
-    cmd.waitForFinished(1000);
+    runCommandForResult("shutdown -t 0 -r -f");
 }
 
 void logout() {
-    QProcess cmd;
-    cmd.start("xfce4-session-logout --logout");
-    cmd.waitForFinished(1000);
+    runCommandForResult("shutdown -t 0 -l");
 }
 
 void sleep() {
-    QProcess cmd;
-    cmd.start("systemctl suspend");
-    cmd.waitForFinished(1000);
+    runCommandForResult("psshutdown -t 0 -d");
 }
+
+void lock_screen() {
+    runCommandForResult("rundll32.exe user32.dll,LockWorkStation");
+}
+
+void blank_screen() {
+    SendMessage(HWND_BROADCAST, WM_SYSCOMMAND, SC_MONITORPOWER, 2);
+}
+
+QString getCommandSuggestions(QString command)
+{
+    return "assoc\nat\nattrib\nbootcfg\ncd\nchkdsk\ncls\ncopy\ndel\ndir\ndiskpart\ndriverquery\necho\nexit\nfc\nfind\nfindstr\nfor\nfsutil\nftype\ngetmac\ngoto\nif\nipconfig\nmd\nmore\nmove\nnet\nnetsh\nnetstat\npath\npathping\npause\nping\npopd\npowercfg\nreg\nrmdir\nren\nsc\nschtasks\nset\nsfc\nshutdown\nsort\nstart\nsubst\nsysteminfo\ntaskkill\ntasklist\ntree\ntype\nvssadmin\nxcopy";
+}
+
+QString getApplicationNames() { return ""; }
+void startApplicationByName(QString name) {}
+
+QString getCpuUsage() {return "";}
+QString getRamUsage() {return "";}
+QString getProcesses() {return "";}
+
+void killProcess(QString pid) {}
 
 }
