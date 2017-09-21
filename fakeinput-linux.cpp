@@ -4,6 +4,7 @@
 #include <QProcess>
 #include <QDateTime>
 #include <QDebug>
+#include <QMap>
 extern "C" {
     #include <xdo.h>
     #include <ctime>
@@ -39,8 +40,15 @@ QString runCommandForResult(QString command) {
 }
 
 xdo_t *xdoInstance;
+QString backupApplicationsList;
 
 void initFakeInput() {
+    // Sometimes grepping app list can take too long. get apps at start & wait up to 5 seconds to ensure we always have apps to display
+    QProcess cmd;
+    cmd.start("/bin/sh", QStringList()<< "-c" << "grep -LEs 'NoDisplay|OnlyShowIn' /usr/share/applications/* | grep '.*.desktop' | xargs grep -hm 1 '^Name=' | sed 's/^.....//'");
+    cmd.waitForFinished(5000);
+    backupApplicationsList = cmd.readAllStandardOutput();
+
     desktopSession = runCommandForResult("echo $DESKTOP_SESSION").simplified();
     qInfo() << "desktopSession" << desktopSession;
     xdoInstance = xdo_new(0);
@@ -78,30 +86,26 @@ void typeString(QString string) {
     }
 }
 
-QString getSpecialKey(QString keyName)
-{
-    if( keyName == "Ctrl" )
-        return "Control";
-    else if( keyName == "Esc" )
-        return "Escape";
-    else if( keyName == "VolumeUp" )
-        return "XF86AudioRaiseVolume";
-    else if( keyName == "VolumeDown" )
-        return "XF86AudioLowerVolume";
-    else
-        return keyName;
-}
+QMap<QString, QString> xorgKeyNames{
+    {"Ctrl", "Control"}, {"Esc", "Escape"}, {"Win", "Super_L"},
+    {"PgU", "Page_Up"}, {"PgD", "Page_Down"},
+
+    {"VolumeUp", "XF86AudioRaiseVolume"}, {"VolumeDown", "XF86AudioLowerVolume"},
+    {"PauseSong", "XF86AudioPlay"}, {"NextSong","XF86AudioNext"}, {"PrevSong", "XF86AudioPrev"},
+
+    {"BrightnessUp", "XF86MonBrightnessUp"}, {"BrightnessDown", "XF86MonBrightnessDown"}
+};
 
 void keyTap(QString key) {
-    xdo_send_keysequence_window(xdoInstance, CURRENTWINDOW, getSpecialKey(key).toLocal8Bit(), 12000);
+    xdo_send_keysequence_window(xdoInstance, CURRENTWINDOW, xorgKeyNames.value(key, key).toLocal8Bit(), 12000);
 }
 
 void keyDown(QString key) {
-    xdo_send_keysequence_window_down(xdoInstance, CURRENTWINDOW, getSpecialKey(key).toLocal8Bit(), 12000);
+    xdo_send_keysequence_window_down(xdoInstance, CURRENTWINDOW, xorgKeyNames.value(key, key).toLocal8Bit(), 12000);
 }
 
 void keyUp(QString key) {
-    xdo_send_keysequence_window_up(xdoInstance, CURRENTWINDOW, getSpecialKey(key).toLocal8Bit(), 12000);
+    xdo_send_keysequence_window_up(xdoInstance, CURRENTWINDOW, xorgKeyNames.value(key, key).toLocal8Bit(), 12000);
 }
 
 void mouseMove(int addX, int addY) {
@@ -183,7 +187,12 @@ void blank_screen() {
 }
 
 QString getApplicationNames() {
-    return runCommandForResult("grep -LEs 'NoDisplay|OnlyShowIn' /usr/share/applications/* | grep '.*.desktop' | xargs grep -hm 1 '^Name=' | sed 's/^.....//'");
+    QString result = runCommandForResult("grep -LEs 'NoDisplay|OnlyShowIn' /usr/share/applications/* | grep '.*.desktop' | xargs grep -hm 1 '^Name=' | sed 's/^.....//'");
+    // if took too long to get app list return backup list gotten at start
+    if(result.indexOf('\n') == result.lastIndexOf('\n'))
+        return backupApplicationsList;
+    else
+        return result;
 }
 
 void startApplicationByName(QString name) {

@@ -203,8 +203,8 @@ void MainWindow::createActions()
 void MainWindow::createTrayIcon()
 {
     trayIcon = new QSystemTrayIcon(this);
-    trayIcon->show();
     trayIcon->setIcon(*programIcon);
+    trayIcon->show();
 
     trayIconMenu = new QMenu(this);
     trayIconMenu->addAction(clientTitleAction);
