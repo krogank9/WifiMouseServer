@@ -18,6 +18,31 @@
 
 #include "fakeinput.h"
 
+QMap<QString, WORD> virtualKeyList {
+    {"Return", VK_RETURN}, {"BackSpace", VK_BACK}, {"Ctrl", VK_CONTROL},
+    {"Win", VK_LWIN}, {"Tab", VK_TAB}, {"Alt", VK_MENU}, {"Esc", VK_ESCAPE},
+    {"Shift", VK_SHIFT}, {"Menu", VK_RMENU}, {"Insert", VK_INSERT},
+    {"Home", VK_HOME}, {"End", VK_END},
+
+    {"VolumeUp", VK_VOLUME_UP}, {"VolumeDown", VK_VOLUME_DOWN}, {"VolumeMute", VK_VOLUME_MUTE},
+    {"PauseSong", VK_MEDIA_PLAY_PAUSE}, {"NextSong", VK_MEDIA_NEXT_TRACK}, {"PrevSong", VK_MEDIA_PREV_TRACK},
+
+    {"Left", VK_LEFT}, {"Right", VK_RIGHT}, {"Up", VK_UP}, {"Down", VK_DOWN},
+    {"PgU", VK_PRIOR}, {"PgD", VK_NEXT},
+
+    {"F1", VK_F1}, {"F2", VK_F2}, {"F3", VK_F3}, {"F4", VK_F4}, {"F5", VK_F5}, {"F6", VK_F6},
+    {"F7", VK_F7}, {"F8", VK_F8}, {"F9", VK_F9}, {"F10", VK_F10}, {"F11", VK_F11}, {"F12", VK_F12},
+
+    {"0", 0x30}, {"1", 0x31}, {"2", 0x32}, {"3", 0x33}, {"4", 0x34}, {"5", 0x35},
+    {"6", 0x36}, {"7", 0x37}, {"8", 0x38}, {"9", 0x39},
+
+    {"a", 0x41}, {"b", 0x42}, {"c", 0x43}, {"d", 0x44}, {"e", 0x45}, {"f", 0x46},
+    {"g", 0x47}, {"h", 0x48}, {"i", 0x49}, {"j", 0x4a}, {"k", 0x4b}, {"l", 0x4c},
+    {"m", 0x4d}, {"n", 0x4e}, {"o", 0x4f}, {"p", 0x50}, {"q", 0x51}, {"r", 0x52},
+    {"s", 0x53}, {"t", 0x54}, {"u", 0x55}, {"v", 0x56}, {"w", 0x57}, {"x", 0x58},
+    {"y", 0x59}, {"z", 0x5a}
+};
+
 namespace FakeInput {
 
 QString getOsName() { return "windows"; }
@@ -78,13 +103,13 @@ void sendMouseEvent(DWORD flags, LONG dx, LONG dy, DWORD mouseData)
 
 // SendInput() function doesn't repeat keys, here's a timer to simulate
 // the normal behavior in windows: keys repeating as you hold them down.
-WORD lastKeyDown = -1;
+QString lastKeyDown;
 qint64 lastKeyTime = 0;
 bool lastKeyStillDown = false;
 
 void keyRepeatCallback() {
     if(lastKeyStillDown && QDateTime::currentMSecsSinceEpoch() - lastKeyTime > 500)
-       sendSpecialKeyEvent(0, lastKeyDown);
+        keyDown(lastKeyDown);
 }
 
 QTimer *keyRepeaterTimer;
@@ -102,8 +127,20 @@ void freeFakeInput() {
 
 void typeUnicodeChar(ushort c)
 {
-    sendUnicodeEvent(KEYEVENTF_UNICODE, c);
-    sendUnicodeEvent(KEYEVENTF_UNICODE | KEYEVENTF_KEYUP, c);
+    if(virtualKeyList.contains(QString(c))) {
+        keyDown(QString(c)); // this allows for key combos. ctrl+a ctrl+l etc
+        keyUp(QString(c)); // doesn't get registered when you use unicode scan key. need VK_ key
+    }
+    else if(virtualKeyList.contains(QString(c).toLower())) {
+        keyDown("Shift");
+        keyDown(QString(c).toLower()); // allows to use shiftkey on mobile keyboard for combos
+        keyUp(QString(c).toLower()); // ex. ctrl + N(capital) will open incognito in chrome
+        keyUp("Shift");
+    }
+    else {
+        sendUnicodeEvent(KEYEVENTF_UNICODE, c);
+        sendUnicodeEvent(KEYEVENTF_UNICODE | KEYEVENTF_KEYUP, c);
+    }
 }
 
 void typeChar(QChar c) {
@@ -125,51 +162,29 @@ void typeString(QString string) {
     }
 }
 
-WORD getSpecialKey(QString keyName)
-{
-    if( keyName == "Return" )
-        return VK_RETURN;
-    else if( keyName == "BackSpace" )
-        return VK_BACK;
-    else if( keyName == "Ctrl" )
-        return VK_CONTROL;
-    else if( keyName == "Tab" )
-        return VK_TAB;
-    else if( keyName == "Alt" )
-        return VK_MENU;
-    else if( keyName == "Esc" )
-        return VK_ESCAPE;
-    else if( keyName == "VolumeUp" )
-        return VK_VOLUME_UP;
-    else if( keyName == "VolumeDown" )
-        return VK_VOLUME_DOWN;
-    else if( keyName == "Left" )
-        return VK_LEFT;
-    else if( keyName == "Right" )
-        return VK_RIGHT;
-    else if( keyName == "Up" )
-        return VK_UP;
-    else if( keyName == "Down" )
-        return VK_DOWN;
-    else
-        return 0;
-}
-
 void keyTap(QString key) {
     keyDown(key);
     keyUp(key);
 }
 
 void keyDown(QString key) {
-    lastKeyDown = getSpecialKey(key);
-    lastKeyStillDown = true;
+    qInfo() << key;
+    lastKeyDown = key;
+    if(key != "Win" && key != "Alt" && key != "Ctrl")
+        lastKeyStillDown = true;
     lastKeyTime = QDateTime::currentMSecsSinceEpoch();
-    sendSpecialKeyEvent(0, lastKeyDown);
+    if(virtualKeyList.contains(key))
+        sendSpecialKeyEvent(0, virtualKeyList.value(key));
+    else if(key.length() > 0)
+        sendUnicodeEvent(KEYEVENTF_UNICODE, key.at(0).unicode());
 }
 
 void keyUp(QString key) {
     lastKeyStillDown = false;
-    sendSpecialKeyEvent(KEYEVENTF_KEYUP, getSpecialKey(key));
+    if(virtualKeyList.contains(key))
+        sendSpecialKeyEvent(KEYEVENTF_KEYUP, virtualKeyList.value(key));
+    else if(key.length() > 0)
+        sendUnicodeEvent(KEYEVENTF_UNICODE | KEYEVENTF_KEYUP, key.at(0).unicode());
 }
 
 void mouseSetPos(int x, int y) {
@@ -266,7 +281,6 @@ void startApplicationByName(QString name) {}
 QString getCpuUsage() {return "";}
 QString getRamUsage() {return "";}
 QString getProcesses() {return "";}
-
 void killProcess(QString pid) {}
 
 }

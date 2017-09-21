@@ -86,7 +86,7 @@ void typeString(QString string) {
     }
 }
 
-QMap<QString, QString> xorgKeyNames{
+QMap<QString, QString> xorgKeyNames {
     {"Ctrl", "Control"}, {"Esc", "Escape"}, {"Win", "Super_L"},
     {"PgU", "Page_Up"}, {"PgD", "Page_Down"},
 
