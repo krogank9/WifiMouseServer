@@ -3,10 +3,13 @@
 // follows so that SendInput gets defined when windows.h
 // is included below.
 #define WINVER 0x0500
-#include <windows.h>
+#include <Windows.h>
 #ifdef _MSC_VER
  #pragma comment(lib, "user32.lib")
+ #pragma comment(lib, "pdh.lib")
 #endif
+#include <Pdh.h>
+#include "tchar.h"
 
 // Note: must compile with MSVC++ 2015
 
@@ -15,6 +18,8 @@
 #include <QTimer>
 #include <QDebug>
 #include <QProcess>
+#include <QFuture>
+#include <QtConcurrent/QtConcurrent>
 #include <QStandardPaths>
 #include <QDir>
 #include <QList>
@@ -152,6 +157,9 @@ void keyRepeatCallback() {
         keyDown(lastKeyDown);
 }
 
+static PDH_HQUERY cpuQuery;
+static PDH_HCOUNTER cpuTotal;
+
 QTimer *keyRepeaterTimer;
 void initFakeInput() {
     keyRepeaterTimer = new QTimer();
@@ -159,6 +167,11 @@ void initFakeInput() {
     keyRepeaterTimer->setInterval(35);
     keyRepeaterTimer->start();
     QObject::connect(keyRepeaterTimer, &QTimer::timeout, keyRepeatCallback);
+
+    PdhOpenQuery(NULL, NULL, &cpuQuery);
+    // You can also use L"\\Processor(*)\\% Processor Time" and get individual CPU values with PdhGetFormattedCounterArray()
+    PdhAddEnglishCounter(cpuQuery, L"\\Processor(_Total)\\% Processor Time", NULL, &cpuTotal);
+    PdhCollectQueryData(cpuQuery);
 }
 
 void freeFakeInput() {
@@ -215,14 +228,38 @@ void keyDown(QString key) {
     lastKeyTime = QDateTime::currentMSecsSinceEpoch();
     if(virtualKeyList.contains(key))
         sendSpecialKeyEvent(0, virtualKeyList.value(key));
+    else if(key.startsWith("Brightness"))
+        ; // set brightness in key up
     else if(key.length() > 0)
         sendUnicodeEvent(KEYEVENTF_UNICODE, key.at(0).unicode());
+}
+
+void changeBrightness(int change) {
+    // this command takes a second to run. just save brightness after getting it once:
+    static int savedBrightness = -1;
+    if(savedBrightness == -1) {
+        QString getCmd = "powershell.exe \"(Get-WmiObject -Namespace root\\wmi -Class WmiMonitorBrightness).CurrentBrightness\"";
+        QProcess pShellForResult;
+        pShellForResult.start(getCmd);
+        pShellForResult.waitForFinished(5000);
+        QString result = pShellForResult.readAllStandardOutput();
+        savedBrightness = result.simplified().toInt();
+    }
+    savedBrightness += change;
+    savedBrightness = savedBrightness > 100 ? 100 : (savedBrightness < 0 ? 0 : savedBrightness);
+    QString setCmd = "powershell.exe \"(Get-WmiObject -Namespace root\\wmi -Class WmiMonitorBrightnessMethods).wmisetbrightness(0, "+QString::number(savedBrightness)+")\"";
+    QProcess pShell;
+    pShell.startDetached(setCmd);
 }
 
 void keyUp(QString key) {
     lastKeyStillDown = false;
     if(virtualKeyList.contains(key))
         sendSpecialKeyEvent(KEYEVENTF_KEYUP, virtualKeyList.value(key));
+    else if(key == "BrightnessUp")
+        changeBrightness(10);
+    else if(key == "BrightnessDown")
+        changeBrightness(-10);
     else if(key.length() > 0)
         sendUnicodeEvent(KEYEVENTF_UNICODE | KEYEVENTF_KEYUP, key.at(0).unicode());
 }
@@ -303,7 +340,7 @@ void sleep() {
 }
 
 void lock_screen() {
-    runCommandForResult("rundll32.exe user32.dll,LockWorkStation");
+    LockWorkStation();
 }
 
 void blank_screen() {
@@ -315,10 +352,8 @@ QString getCommandSuggestions(QString command)
     return "assoc\nat\nattrib\nbootcfg\ncd\nchkdsk\ncls\ncopy\ndel\ndir\ndiskpart\ndriverquery\necho\nexit\nfc\nfind\nfindstr\nfor\nfsutil\nftype\ngetmac\ngoto\nif\nipconfig\nmd\nmore\nmove\nnet\nnetsh\nnetstat\npath\npathping\npause\nping\npopd\npowercfg\nreg\nrmdir\nren\nsc\nschtasks\nset\nsfc\nshutdown\nsort\nstart\nsubst\nsysteminfo\ntaskkill\ntasklist\ntree\ntype\nvssadmin\nxcopy";
 }
 
-QString lastApplicationsList;
 QString getApplicationNames() {
-    lastApplicationsList = getProgramsList();
-    QStringList sorted = lastApplicationsList.split("\n");
+    QStringList sorted = getProgramsList().split("\n");
     // Remove file extensions & prefix
     for(int i=0; i<sorted.size(); i++) {
         QString cur = sorted.at(i);
@@ -326,6 +361,10 @@ QString getApplicationNames() {
         cur = cur.mid(0, cur.indexOf("."));
         sorted[i] = cur;
     }
+    // Remove uninstall program shortcuts
+    for(int i=0; i<sorted.size(); i++)
+        if(sorted.at(i).startsWith("Uninstall "))
+            sorted.removeAt(i--);
     // Sort alphabetically
     for(int i=0; i<sorted.size()-1; i++)
         for(int j=i+1; j<sorted.size(); j++)
@@ -334,19 +373,89 @@ QString getApplicationNames() {
     return sorted.join("\n");
 }
 void startApplicationByName(QString name) {
-    QStringList apps = lastApplicationsList.split("\n");
+    QStringList apps = getProgramsList().split("\n");
     for(int i=0; i<apps.size(); i++) {
         QString appName = apps.at(i);
         if(appName.endsWith(name+".lnk")) {
             std::wstring wstr = appName.toStdWString();
             ShellExecute(NULL, NULL, wstr.data(), NULL, NULL, SW_NORMAL);
+            break;
         }
     }
 }
 
-QString getCpuUsage() {return "";}
-QString getRamUsage() {return "";}
-QString getProcesses() {return "";}
-void killProcess(QString pid) {}
+double getCurrentValue(){
+    PDH_FMT_COUNTERVALUE counterVal;
+
+    PdhCollectQueryData(cpuQuery);
+    PdhGetFormattedCounterValue(cpuTotal, PDH_FMT_DOUBLE, NULL, &counterVal);
+    return counterVal.doubleValue;
+}
+
+QString getCpuUsage() {
+    return QString::number((int)getCurrentValue());
+}
+
+unsigned long lastTotalRamKbs = 8*1000*1000;
+QString getRamUsage() {
+    MEMORYSTATUSEX statex;
+    ZeroMemory(&statex, sizeof(statex));
+    statex.dwLength = sizeof(statex);
+    GlobalMemoryStatusEx(&statex);
+    unsigned long total = statex.ullTotalPhys;
+    unsigned long available = statex.ullAvailPhys;
+    unsigned long used = total - available;
+    lastTotalRamKbs = total > 0 ? total/1000 : 8000000;
+    return QString::number(used/1000) + " " + QString::number(total/1000);
+}
+
+QString getProcessesFromPowershell() {
+    QProcess pShell;
+    // pid / cpu / mem / name
+    pShell.start("powershell.exe \"$perflist = (get-wmiobject Win32_PerfFormattedData_PerfProc_Process); foreach ($p in $perflist) {'' + $p.IDProcess + ' ' + $p.PercentProcessorTime + ' ' + $p.WorkingSet + ' ' + $p.name}\"");
+    pShell.waitForFinished();
+    return pShell.readAllStandardOutput();
+}
+
+QFuture<QString> pFuture;
+QString lastFutureResult;
+qint64 lastFutureResultTime = 0;
+
+QString getProcesses() {
+    if(pFuture.isFinished() && QDateTime::currentMSecsSinceEpoch() - lastFutureResultTime > 3000) {
+        lastFutureResultTime = QDateTime::currentMSecsSinceEpoch();
+        if(pFuture.resultCount() > 0)
+            lastFutureResult = pFuture.result();
+        pFuture = QtConcurrent::run(getProcessesFromPowershell);
+    }
+
+    // pid / cpu / mem / name
+    QString perfList = lastFutureResult;
+
+    QStringList toList = perfList.split("\n");
+    for(int i=0; i<toList.size(); i++) {
+        QStringList info = toList[i].simplified().split(" ");
+        if(info.size() < 2)
+            continue;
+        long pMemoryKbs = info[2].toULong()/1000;
+        float pctMem = ((float)pMemoryKbs)/((float)lastTotalRamKbs);
+        int pctMemInt = (pctMem*100.0f);
+        info[2] = QString::number(pctMemInt);
+        toList[i] = info.join(" ");
+    }
+    // filter junk processes
+    for(int i=0; i<toList.size(); i++)
+        if(toList[i].endsWith("_Total") || toList[i].endsWith("Idle")
+          || toList[i].contains("svchost") || toList[i].contains("powershell")
+          || toList[i].contains("conhost") || toList[i].endsWith("Memory Compression"))
+            toList.removeAt(i--);
+    return toList.join("\n");
+}
+void killProcess(QString pid) {
+    QProcess killer;
+    killer.startDetached("Taskkill /PID "+pid.simplified()+" /F");
+}
+
+// $perflist = (get-wmiobject Win32_PerfFormattedData_PerfProc_Process); foreach ($p in $perflist) {$p.IDProcess + ' ' + $p.PercentProcessorTime + ' ' + $p.name}
 
 }
