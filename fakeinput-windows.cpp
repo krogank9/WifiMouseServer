@@ -96,13 +96,27 @@ void platformIndependentSleepMs(qint64 ms) {
     Sleep(ms);
 }
 
+QList<QString> nonBlockingCommands = {
+    "echo", "netstat", "ipconfig", "dir", "chdir",
+    "at", "fsutil", "ping", "reg", "set", "sort",
+    "systeminfo", "taskkill"
+};
+
 QString runCommandForResult(QString command) {
     QProcess cmd;
-    // trick to startDetached process and still read its output, use sh.
-    // does not work with bash
-    cmd.start("start /B " + command);
-    cmd.waitForFinished(250);
-    return cmd.readAllStandardOutput() + cmd.readAllStandardError();
+    // trick to keep process started without startDetached running not possible on windows.
+    // so only allow any we know that will not block for more than few hundred ms to return
+    for(int i=0; i<nonBlockingCommands.size(); i++) {
+        if(command.startsWith(nonBlockingCommands.at(i))) {
+            cmd.start(command);
+            cmd.waitForFinished(350);
+            QString result = cmd.readAllStandardOutput() + cmd.readAllStandardError();
+            qInfo() << result;
+            return result;
+        }
+    }
+    cmd.startDetached(command);
+    return "";
 }
 
 void sendUnicodeEvent(DWORD flags, WORD scan)
