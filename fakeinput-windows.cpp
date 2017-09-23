@@ -104,7 +104,7 @@ QList<QString> nonBlockingCommands = {
 
 QString runCommandForResult(QString command) {
     QProcess cmd;
-    // trick to keep process started without startDetached running not possible on windows.
+    // trick to start process detached & read output not possible on windows
     // so only allow any we know that will not block for more than few hundred ms to return
     for(int i=0; i<nonBlockingCommands.size(); i++) {
         if(command.startsWith(nonBlockingCommands.at(i))) {
