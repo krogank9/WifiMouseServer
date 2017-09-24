@@ -231,13 +231,17 @@ void details(QString name)
 
 void sendFileForDownload(QString name)
 {
+    qInfo() << "sending file";
     QFileInfo info = getFileInfo(name);
     QFile file(info.absoluteFilePath());
     if(file.exists() && file.open(QIODevice::ReadOnly)) {
         writeString("Sending", true);
         QByteArray fileBytes = file.readAll();
         file.close();
-        writeDataEncrypted(fileBytes);
+        if( writeDataEncrypted(fileBytes) )
+            qInfo() << "sent file";
+        else
+            qInfo() << "failed to send file";
     }
     else {
         writeString("Failed", true);
@@ -255,6 +259,8 @@ void receiveSentFile(QString name)
 
     // Receive the file
     QByteArray fileBytes = readDataEncrypted();
+    qInfo() << fileBytes.length();
+    writeString("Success", true);
 
     // Write it to a file with given name
     int writtenSoFar = 0;
@@ -271,7 +277,6 @@ void receiveSentFile(QString name)
     }
     toWrite.close();
 
-    writeString("Success", true);
     qInfo() << "fileSize" << fileBytes.length();
     qInfo() << "successfully wrote file";
 }

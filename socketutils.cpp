@@ -95,8 +95,11 @@ bool writeAllData(QByteArray data) {
         int wroteThisTime = socket->write(data.data() + wroteSoFar, data.size() - wroteSoFar);
         if(wroteThisTime <= 0)
             break;
-        else
+        else {
             wroteSoFar += wroteThisTime;
+            if(!socket->waitForBytesWritten(1000))
+                return false;
+        }
     }
 
     if(wroteSoFar != data.size())
@@ -107,17 +110,15 @@ bool writeAllData(QByteArray data) {
 
 // write & write encrypted
 bool writeDataUnencrypted(QByteArray data) {
-    return writeAllData(intToBytes(data.size())) && writeAllData(data) && socket->waitForBytesWritten(1000);
+    return writeAllData(intToBytes(data.size()) + data);
 }
 
 bool writeDataEncrypted(QByteArray data) {
     if(socketIsBluetooth)
         return writeDataUnencrypted(data); // bluetooth already encrypted
 
-    int originalSize = data.size();
-    data = intToBytes(originalSize) + data;
     // AES encryption requires 16 byte blocks
-    int padding = data.size() > 16 ? 16-(data.size()%16) : 16 - data.size();
+    int padding = 16-(data.size()%16);
     data.resize(data.size() + padding);
 
     sessionIV = ( sessionIV + 1 ) % JAVA_INT_MAX_VAL;
@@ -128,7 +129,7 @@ bool writeDataEncrypted(QByteArray data) {
 }
 
 bool readAllData(QByteArray *data) {
-    if(!bytesAvailable() && !waitForReadyRead(1000))
+    if(!bytesAvailable() && !waitForReadyRead(2500))
         return false;
     int bytesLeft = data->length();
     int totalBytesRead = 0;
@@ -149,7 +150,7 @@ bool readAllData(QByteArray *data) {
         while(bytesRead > 0 && bytesLeft > 0);
 
         // No bytes left to read. If Block hasn't finished reading, try wait
-        if(bytesLeft > 0 && !waitForReadyRead(1000)) {
+        if(bytesLeft > 0 && !waitForReadyRead(2500)) {
             socket->close();
             return false;
         }
@@ -181,16 +182,12 @@ QByteArray readDataEncrypted() {
     sessionIV = ( sessionIV + 1 ) % JAVA_INT_MAX_VAL;
     QByteArray iv = EncryptUtils::makeHash16(QString::number(sessionIV).toUtf8());
 
-    if(data.size() % 16 == 0)
+    if(data.size() % 16 == 0) {
         data = EncryptUtils::decryptBytes(data, sessionPasswordHash, iv);
-    else
-        return data;
-
-    // First 4 bytes of encrypted data are its real length minus padding
-    qint64 realDataLength = MAX( MIN( bytesToInt(data), data.length() - 4 ), 0 );
-    if(data.size() >= 4) {
-        data.remove(0, 4);
-        data.resize(realDataLength);
+    }
+    else {
+        qInfo() << "encrypted data wrong size";
+        return QByteArray();
     }
 
     return data;
