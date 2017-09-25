@@ -76,6 +76,7 @@ QList<QFileInfo> recurseAndGetShortcutList(QDir dir, int recursions = 0) {
     return lnkList;
 }
 
+QString programsList = "";
 QString getProgramsList() {
     QDir dir(QDir::home().absolutePath() + "/AppData/Roaming");
     QList<QFileInfo> exes = recurseAndGetShortcutList(dir);
@@ -186,6 +187,8 @@ void initFakeInput() {
     // You can also use L"\\Processor(*)\\% Processor Time" and get individual CPU values with PdhGetFormattedCounterArray()
     PdhAddEnglishCounter(cpuQuery, L"\\Processor(_Total)\\% Processor Time", NULL, &cpuTotal);
     PdhCollectQueryData(cpuQuery);
+
+    programsList = getProgramsList();
 }
 
 void freeFakeInput() {
@@ -367,7 +370,7 @@ QString getCommandSuggestions(QString command)
 }
 
 QString getApplicationNames() {
-    QStringList sorted = getProgramsList().split("\n");
+    QStringList sorted = programsList.split("\n");
     // Remove file extensions & prefix
     for(int i=0; i<sorted.size(); i++) {
         QString cur = sorted.at(i);
@@ -387,7 +390,7 @@ QString getApplicationNames() {
     return sorted.join("\n");
 }
 void startApplicationByName(QString name) {
-    QStringList apps = getProgramsList().split("\n");
+    QStringList apps = programsList.split("\n");
     for(int i=0; i<apps.size(); i++) {
         QString appName = apps.at(i);
         if(appName.endsWith(name+".lnk")) {
@@ -398,16 +401,11 @@ void startApplicationByName(QString name) {
     }
 }
 
-double getCurrentValue(){
+QString getCpuUsage() {
     PDH_FMT_COUNTERVALUE counterVal;
-
     PdhCollectQueryData(cpuQuery);
     PdhGetFormattedCounterValue(cpuTotal, PDH_FMT_DOUBLE, NULL, &counterVal);
-    return counterVal.doubleValue;
-}
-
-QString getCpuUsage() {
-    return QString::number((int)getCurrentValue());
+    return QString::number((int)counterVal.doubleValue);
 }
 
 unsigned long lastTotalRamKbs = 8*1000*1000;
@@ -460,6 +458,7 @@ QString getProcesses() {
     // filter junk processes
     for(int i=0; i<toList.size(); i++)
         if(toList[i].endsWith("_Total") || toList[i].endsWith("Idle")
+          || toList[i].contains("WifiMouseServer")
           || toList[i].contains("svchost") || toList[i].contains("powershell")
           || toList[i].contains("conhost") || toList[i].endsWith("Memory Compression"))
             toList.removeAt(i--);
@@ -469,7 +468,5 @@ void killProcess(QString pid) {
     QProcess killer;
     killer.startDetached("Taskkill /PID "+pid.simplified()+" /F");
 }
-
-// $perflist = (get-wmiobject Win32_PerfFormattedData_PerfProc_Process); foreach ($p in $perflist) {$p.IDProcess + ' ' + $p.PercentProcessorTime + ' ' + $p.name}
 
 }
