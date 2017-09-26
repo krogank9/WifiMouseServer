@@ -9,12 +9,11 @@
 #include <QMutex>
 #include <QWaitCondition>
 
-qint64 MIN(qint64 a, qint64 b) {
-    return a<b?a:b;
-}
-qint64 MAX(qint64 a, qint64 b) {
-    return a>b?a:b;
-}
+// only send 100kb at a time max
+#define IO_MAX_CHUNK 100
+
+qint64 MIN(qint64 a, qint64 b) { return a<b?a:b; }
+qint64 MAX(qint64 a, qint64 b) { return a>b?a:b; }
 
 QByteArray intToBytes(unsigned int n) {
     QByteArray bytes(4, 0);
@@ -91,14 +90,37 @@ bool waitForReadyRead(int msecs)
 
 bool writeAllData(QByteArray data) {
     int wroteSoFar = 0;
+    int chunkSoFar = 0;
+    int iter = 0;
     while(wroteSoFar < data.size()) {
-        int wroteThisTime = socket->write(data.data() + wroteSoFar, data.size() - wroteSoFar);
+        int chunkLeft = IO_MAX_CHUNK - chunkSoFar;
+        int bytesLeft = data.size() - wroteSoFar;
+        int wroteThisTime = socket->write(data.data() + wroteSoFar, MIN(bytesLeft, chunkLeft));
+        iter++;
+
         if(wroteThisTime <= 0)
             break;
         else {
             wroteSoFar += wroteThisTime;
-            if(!socket->waitForBytesWritten(1000))
+            chunkSoFar += wroteThisTime;
+            if(!waitForBytesWritten(1000))
                 return false;
+            // ping client inbetween when writing large amounts of data so socket doesn't lose connection
+            if(chunkSoFar == IO_MAX_CHUNK) {
+                qInfo() << "iter" << iter;
+                if(!bytesAvailable() && !waitForReadyRead(1000))
+                    return false;
+                QByteArray ping = socket->read(1);
+                if(ping.size() != 1 || ping.at(0) != 0) {
+                    qInfo() << "couldn't read ping";
+                    socket->close();
+                    return false;
+                }
+                else {
+                    qInfo() << "read ping between chunks";
+                }
+                chunkSoFar = 0;
+            }
         }
     }
 
@@ -131,26 +153,36 @@ bool writeDataEncrypted(QByteArray data) {
 bool readAllData(QByteArray *data) {
     if(!bytesAvailable() && !waitForReadyRead(2500))
         return false;
-    int bytesLeft = data->length();
-    int totalBytesRead = 0;
-    while(bytesLeft > 0) {
+    int readSoFar = 0;
+    int chunkSoFar = 0;
+    while(readSoFar < data->size()) {
         qint64 bytesRead;
         do {
-            bytesRead = socket->read(data->data() + totalBytesRead, bytesLeft);
+            int left = data->size() - readSoFar;
+            int chunkLeft = IO_MAX_CHUNK - chunkSoFar;
+            bytesRead = socket->read(data->data() + readSoFar, MIN(left, chunkLeft));
 
-            if(bytesRead < 0) {
-                qInfo() << "socket read error";
+            if(bytesRead < 0)
                 return false;
-            }
             else {
-                totalBytesRead += bytesRead;
-                bytesLeft -= bytesRead;
+                readSoFar += bytesRead;
+                chunkSoFar += bytesRead;
+
+                // ping client inbetween when reading large amounts of data so socket doesn't lose connection
+                if(chunkSoFar == IO_MAX_CHUNK) {
+                    socket->write(QByteArray(1, 0), 1);
+                    if( !waitForBytesWritten(1000) ) {
+                        socket->close();
+                        return false;
+                    }
+                    chunkSoFar = 0;
+                }
             }
         }
-        while(bytesRead > 0 && bytesLeft > 0);
+        while(bytesRead > 0 && readSoFar < data->size());
 
         // No bytes left to read. If Block hasn't finished reading, try wait
-        if(bytesLeft > 0 && !waitForReadyRead(2500)) {
+        if(readSoFar < data->size() && !waitForReadyRead(2500)) {
             socket->close();
             return false;
         }
