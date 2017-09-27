@@ -9,8 +9,8 @@
 #include <QMutex>
 #include <QWaitCondition>
 
-// only send 100kb at a time max
-#define IO_MAX_CHUNK 100
+// 30 kb max chunk size
+#define IO_MAX_CHUNK (1024*30)
 
 qint64 MIN(qint64 a, qint64 b) { return a<b?a:b; }
 qint64 MAX(qint64 a, qint64 b) { return a>b?a:b; }
@@ -90,48 +90,27 @@ bool waitForReadyRead(int msecs)
 
 bool writeAllData(QByteArray data) {
     int wroteSoFar = 0;
-    int chunkSoFar = 0;
-    int iter = 0;
     while(wroteSoFar < data.size()) {
-        int chunkLeft = IO_MAX_CHUNK - chunkSoFar;
         int bytesLeft = data.size() - wroteSoFar;
-        int wroteThisTime = socket->write(data.data() + wroteSoFar, MIN(bytesLeft, chunkLeft));
-        iter++;
+        int wroteThisTime = socket->write(data.data() + wroteSoFar, MIN(bytesLeft, IO_MAX_CHUNK));
 
-        if(wroteThisTime <= 0)
+        if(wroteThisTime <= 0 || !waitForBytesWritten(1000))
             break;
-        else {
+        else
             wroteSoFar += wroteThisTime;
-            chunkSoFar += wroteThisTime;
-            if(!waitForBytesWritten(1000))
-                return false;
-            // ping client inbetween when writing large amounts of data so socket doesn't lose connection
-            if(chunkSoFar == IO_MAX_CHUNK) {
-                qInfo() << "iter" << iter;
-                if(!bytesAvailable() && !waitForReadyRead(1000))
-                    return false;
-                QByteArray ping = socket->read(1);
-                if(ping.size() != 1 || ping.at(0) != 0) {
-                    qInfo() << "couldn't read ping";
-                    socket->close();
-                    return false;
-                }
-                else {
-                    qInfo() << "read ping between chunks";
-                }
-                chunkSoFar = 0;
-            }
-        }
     }
 
-    if(wroteSoFar != data.size())
+    if(wroteSoFar != data.size()) {
         socket->close();
-
-    return wroteSoFar == data.size();
+        return false;
+    }
+    else
+        return socket->bytesToWrite() == 0 || waitForBytesWritten(1000);
 }
 
 // write & write encrypted
 bool writeDataUnencrypted(QByteArray data) {
+    // Note: bluetooth fucks up if you send data size and data in 2 writes.
     return writeAllData(intToBytes(data.size()) + data);
 }
 
@@ -154,30 +133,17 @@ bool readAllData(QByteArray *data) {
     if(!bytesAvailable() && !waitForReadyRead(2500))
         return false;
     int readSoFar = 0;
-    int chunkSoFar = 0;
     while(readSoFar < data->size()) {
         qint64 bytesRead;
         do {
-            int left = data->size() - readSoFar;
-            int chunkLeft = IO_MAX_CHUNK - chunkSoFar;
-            bytesRead = socket->read(data->data() + readSoFar, MIN(left, chunkLeft));
+            int bytesLeft = data->size() - readSoFar;
+            // server doesn't seem to need max chunk read size. mobile glitches out for reading tho
+            bytesRead = socket->read(data->data() + readSoFar, bytesLeft);
 
             if(bytesRead < 0)
                 return false;
-            else {
+            else
                 readSoFar += bytesRead;
-                chunkSoFar += bytesRead;
-
-                // ping client inbetween when reading large amounts of data so socket doesn't lose connection
-                if(chunkSoFar == IO_MAX_CHUNK) {
-                    socket->write(QByteArray(1, 0), 1);
-                    if( !waitForBytesWritten(1000) ) {
-                        socket->close();
-                        return false;
-                    }
-                    chunkSoFar = 0;
-                }
-            }
         }
         while(bytesRead > 0 && readSoFar < data->size());
 
@@ -214,13 +180,10 @@ QByteArray readDataEncrypted() {
     sessionIV = ( sessionIV + 1 ) % JAVA_INT_MAX_VAL;
     QByteArray iv = EncryptUtils::makeHash16(QString::number(sessionIV).toUtf8());
 
-    if(data.size() % 16 == 0) {
+    if(data.size() % 16 == 0)
         data = EncryptUtils::decryptBytes(data, sessionPasswordHash, iv);
-    }
-    else {
-        qInfo() << "encrypted data wrong size";
+    else
         return QByteArray();
-    }
 
     return data;
 }
