@@ -22,10 +22,16 @@ QString serverVersion = "1";
  ****************************************
  ****************************************/
 
+NetworkThread::NetworkThread() {
+    FakeInput::initFakeInput();
+}
+
+NetworkThread::~NetworkThread() {
+    FakeInput::freeFakeInput();
+}
+
 void NetworkThread::run()
 {
-   FakeInput::initFakeInput();
-
    AbstractedServer server(this);
 
    int count = 0;
@@ -51,8 +57,6 @@ void NetworkThread::run()
 
        delete socket;
    }
-
-   FakeInput::freeFakeInput();
 }
 
 bool NetworkThread::verifyClient()

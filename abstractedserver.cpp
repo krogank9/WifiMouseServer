@@ -127,7 +127,7 @@ void AbstractedServer::listenWithTimeout(qint16 timeoutMs)
     stopWatch.start();
     eventLoop.processEvents();
     while(stopWatch.elapsed() < timeoutMs && pendingSocket == 0) {
-        FakeInput::platformIndependentSleepMs(50); // sleep for cpu
+        FakeInput::platformIndependentSleepMs(100); // sleep for cpu
         eventLoop.processEvents();
 
         if(tcpServer.hasPendingConnections())

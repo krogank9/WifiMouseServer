@@ -9,14 +9,14 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-    RunGuard guard("WifiMouseServer");
+    /*RunGuard guard("WifiMouseServer");
     if( !guard.tryToRun() ) {
         QSystemTrayIcon dummy;
         dummy.show();
         dummy.showMessage("WifiMouseServer", "Already running");
         dummy.hide();
         return 0;
-    }
+    }*/
 
     MainWindow w;
     NetworkThread networkThread;

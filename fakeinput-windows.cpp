@@ -192,6 +192,7 @@ void initFakeInput() {
 }
 
 void freeFakeInput() {
+    keyRepeaterTimer->stop();
     delete keyRepeaterTimer;
 }
 
