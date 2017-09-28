@@ -3,22 +3,22 @@
 #include "runguard.h"
 #include <QApplication>
 #include <QDebug>
+#include <QMessageBox>
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-    /*RunGuard guard("WifiMouseServer");
+    RunGuard guard("WifiMouseServer");
     if( !guard.tryToRun() ) {
-        QSystemTrayIcon dummy;
-        dummy.show();
-        dummy.showMessage("WifiMouseServer", "Already running");
-        dummy.hide();
+        QMessageBox error;
+        error.setText("Another instance of WifiMouseServer is already running.");
+        error.exec();
         return 0;
-    }*/
+    }
 
     MainWindow w;
-    NetworkThread networkThread(&w);
+    NetworkThread networkThread;
     networkThread.mainWindow = &w;
 
     networkThread.start();
