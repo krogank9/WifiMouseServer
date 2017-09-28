@@ -3,7 +3,6 @@
 #include "runguard.h"
 #include <QApplication>
 #include <QDebug>
-#include "fileutils.h"
 
 int main(int argc, char *argv[])
 {
@@ -19,9 +18,14 @@ int main(int argc, char *argv[])
     }*/
 
     MainWindow w;
-    NetworkThread networkThread;
+    NetworkThread networkThread(&w);
     networkThread.mainWindow = &w;
-    networkThread.start();
 
-    return a.exec();
+    networkThread.start();
+    int result = a.exec();
+
+    networkThread.shouldQuit = true;
+    networkThread.wait();
+
+    return result;
 }

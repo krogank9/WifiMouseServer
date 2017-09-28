@@ -11,10 +11,11 @@
 class NetworkThread : public QThread
 {
 public:
-    NetworkThread();
+    NetworkThread(QObject *parent = nullptr);
     ~NetworkThread();
     void run();
     MainWindow *mainWindow;
+    bool shouldQuit;
 private:
     QByteArray getPassword();
     bool verifyClient();

@@ -120,13 +120,13 @@ bool AbstractedServer::tcpServerListen()
     return true;
 }
 
-void AbstractedServer::listenWithTimeout(qint16 timeoutMs)
+void AbstractedServer::listenWithTimeout(qint16 timeoutMs, bool *shouldQuit)
 {
     trySetupServers();
     QTime stopWatch;
     stopWatch.start();
     eventLoop.processEvents();
-    while(stopWatch.elapsed() < timeoutMs && pendingSocket == 0) {
+    while(stopWatch.elapsed() < timeoutMs && pendingSocket == 0 && (!shouldQuit || !(*shouldQuit))) {
         FakeInput::platformIndependentSleepMs(100); // sleep for cpu
         eventLoop.processEvents();
 

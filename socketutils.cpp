@@ -61,27 +61,29 @@ QByteArray getSessionHash()
 bool bytesAvailable() { return socket->bytesAvailable() > 0; }
 
 // wait functions that will work for both TCP & Bluetooth IODevice
-bool waitForBytesWritten(int msecs)
+bool waitForBytesWritten(int msecs, bool *shouldQuit)
 {
     QEventLoop eventLoop;
     QTime stopWatch;
     stopWatch.start();
 
     eventLoop.processEvents();
-    while(stopWatch.elapsed() < msecs && socket->bytesToWrite() && socket->isOpen()) {
+    while(stopWatch.elapsed() < msecs && socket->bytesToWrite() && socket->isOpen()
+          && (!shouldQuit || !(*shouldQuit))) {
         FakeInput::platformIndependentSleepMs(10); // sleep for cpu
         eventLoop.processEvents();
     }
     return socket->bytesToWrite() == false;
 }
-bool waitForReadyRead(int msecs)
+bool waitForReadyRead(int msecs, bool *shouldQuit)
 {
     QEventLoop eventLoop;
     QTime stopWatch;
     stopWatch.start();
 
     eventLoop.processEvents();
-    while(stopWatch.elapsed() < msecs && socket->bytesAvailable() == false && socket->isOpen()) {
+    while(stopWatch.elapsed() < msecs && socket->bytesAvailable() == false && socket->isOpen()
+          && (!shouldQuit || !(*shouldQuit))) {
         FakeInput::platformIndependentSleepMs(10); // sleep for cpu
         eventLoop.processEvents();
     }
