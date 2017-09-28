@@ -23,7 +23,6 @@ QString serverVersion = "1";
  ****************************************/
 
 NetworkThread::NetworkThread(QObject *parent) : QThread(parent) {
-    shouldQuit = false;
     FakeInput::initFakeInput();
 }
 
@@ -36,10 +35,10 @@ void NetworkThread::run()
    AbstractedServer server(this);
 
    int count = 0;
-   while(shouldQuit == false) {
+   while(!isInterruptionRequested()) {
        updateClientIp("Not connected");
        qInfo() << "Listening for connection... " << ++count;
-       server.listenWithTimeout(1000, &shouldQuit);
+       server.listenWithTimeout(1000);
 
        QIODevice *socket = server.nextPendingConnection();
        if(socket == 0)
@@ -118,8 +117,8 @@ void specialKeyCombo(QString comboString) {
 void NetworkThread::startInputLoop()
 {
     int pingCount = 0;
-    while(!shouldQuit) {
-        if( !waitForReadyRead(1000, &shouldQuit) ) {
+    while(!isInterruptionRequested()) {
+        if( !waitForReadyRead(1000) ) {
             qInfo() << "Read timed out...\n";
             break;
         }

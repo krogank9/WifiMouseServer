@@ -15,7 +15,6 @@ public:
     ~NetworkThread();
     void run();
     MainWindow *mainWindow;
-    bool shouldQuit;
 private:
     QByteArray getPassword();
     bool verifyClient();

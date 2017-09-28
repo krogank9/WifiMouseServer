@@ -15,7 +15,7 @@ public:
     ~AbstractedServer();
 
     QIODevice *nextPendingConnection();
-    void listenWithTimeout(qint16 timeoutMs, bool *shouldQuit = 0);
+    void listenWithTimeout(qint16 timeoutMs);
     void trySetupServers();
 
     QString pendingSocketInfo;

@@ -8,6 +8,7 @@
 #include <QTextCodec>
 #include <QMutex>
 #include <QWaitCondition>
+#include <QThread>
 
 // 30 kb max chunk size
 #define IO_MAX_CHUNK (1024*30)
@@ -61,29 +62,31 @@ QByteArray getSessionHash()
 bool bytesAvailable() { return socket->bytesAvailable() > 0; }
 
 // wait functions that will work for both TCP & Bluetooth IODevice
-bool waitForBytesWritten(int msecs, bool *shouldQuit)
+bool waitForBytesWritten(int msecs)
 {
+    QThread *curThread = QThread::currentThread();
     QEventLoop eventLoop;
     QTime stopWatch;
     stopWatch.start();
 
     eventLoop.processEvents();
     while(stopWatch.elapsed() < msecs && socket->bytesToWrite() && socket->isOpen()
-          && (!shouldQuit || !(*shouldQuit))) {
+          && (curThread && !curThread->isInterruptionRequested())) {
         FakeInput::platformIndependentSleepMs(10); // sleep for cpu
         eventLoop.processEvents();
     }
     return socket->bytesToWrite() == false;
 }
-bool waitForReadyRead(int msecs, bool *shouldQuit)
+bool waitForReadyRead(int msecs)
 {
+    QThread *curThread = QThread::currentThread();
     QEventLoop eventLoop;
     QTime stopWatch;
     stopWatch.start();
 
     eventLoop.processEvents();
     while(stopWatch.elapsed() < msecs && socket->bytesAvailable() == false && socket->isOpen()
-          && (!shouldQuit || !(*shouldQuit))) {
+          && (curThread && !curThread->isInterruptionRequested())) {
         FakeInput::platformIndependentSleepMs(10); // sleep for cpu
         eventLoop.processEvents();
     }

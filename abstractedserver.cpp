@@ -3,6 +3,7 @@
 #include <QTime>
 #include <QBluetoothSocket>
 #include <QTcpSocket>
+#include <QThread>
 #include "fakeinput.h"
 
 AbstractedServer::AbstractedServer(QObject *parent)
@@ -120,13 +121,14 @@ bool AbstractedServer::tcpServerListen()
     return true;
 }
 
-void AbstractedServer::listenWithTimeout(qint16 timeoutMs, bool *shouldQuit)
+void AbstractedServer::listenWithTimeout(qint16 timeoutMs)
 {
+    QThread *curThread = QThread::currentThread();
     trySetupServers();
     QTime stopWatch;
     stopWatch.start();
     eventLoop.processEvents();
-    while(stopWatch.elapsed() < timeoutMs && pendingSocket == 0 && (!shouldQuit || !(*shouldQuit))) {
+    while(stopWatch.elapsed() < timeoutMs && pendingSocket == 0 && (curThread && !curThread->isInterruptionRequested())) {
         FakeInput::platformIndependentSleepMs(100); // sleep for cpu
         eventLoop.processEvents();
 

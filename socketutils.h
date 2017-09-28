@@ -19,8 +19,8 @@ bool writeAllData(QByteArray data);
 bool readAllData(QByteArray *data);
 
 bool bytesAvailable();
-bool waitForBytesWritten(int msecs, bool *shouldQuit = 0);
-bool waitForReadyRead(int msecs, bool *shouldQuit = 0);
+bool waitForBytesWritten(int msecs);
+bool waitForReadyRead(int msecs);
 bool writeDataUnencrypted(QByteArray data);
 bool writeDataEncrypted(QByteArray data);
 QByteArray readDataUnencrypted();
