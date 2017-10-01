@@ -126,13 +126,16 @@ void NetworkThread::startInputLoop()
         QString message = readString(true);
 
         bool zoomEvent = false;
+        qint64 lastZoomEvent = 0;
 
         if(message == "PING") {
             if( memcmp(getPassword().data(), getSessionHash().data(), 16) != 0)
-                return;
+                break;
             qInfo() << "Pinging... " << ++pingCount << "\n";
             writeString("PING", true);
-            continue;
+
+            if(QDateTime::currentMSecsSinceEpoch() - lastZoomEvent < 1000)
+                continue;
         }
 
         if(message.startsWith("MouseMove ")) {
@@ -178,6 +181,7 @@ void NetworkThread::startInputLoop()
             specialKeyCombo(message);
         } else if(message.startsWith("Zoom ")) {
             zoomEvent = true;
+            lastZoomEvent = QDateTime::currentMSecsSinceEpoch();
             message.remove("Zoom ");
             FakeInput::zoom(message.toInt());
         } else if(message.startsWith("Power ")) {
