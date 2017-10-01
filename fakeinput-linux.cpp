@@ -90,7 +90,7 @@ QMap<QString, QString> xorgKeyNames {
     {"Ctrl", "Control"}, {"Esc", "Escape"}, {"Win", "Super_L"},
     {"PgU", "Page_Up"}, {"PgD", "Page_Down"},
 
-    {"VolumeUp", "XF86AudioRaiseVolume"}, {"VolumeDown", "XF86AudioLowerVolume"},
+    {"VolumeUp", "XF86AudioRaiseVolume"}, {"VolumeDown", "XF86AudioLowerVolume"}, {"VolumeMute", "XF86AudioMute"},
     {"PauseSong", "XF86AudioPlay"}, {"NextSong","XF86AudioNext"}, {"PrevSong", "XF86AudioPrev"},
 
     {"BrightnessUp", "XF86MonBrightnessUp"}, {"BrightnessDown", "XF86MonBrightnessDown"}
