@@ -91,6 +91,7 @@ void MainWindow::setClientIp(QString ip)
 void MainWindow::updateServerIp()
 {
     foreach (const QHostAddress &address, QNetworkInterface::allAddresses()) {
+        qInfo() << address.toString();
         if (address.protocol() == QAbstractSocket::IPv4Protocol && address != QHostAddress(QHostAddress::LocalHost))
             ui->serverIpLabel->setText("Server IP: "+address.toString());
     }

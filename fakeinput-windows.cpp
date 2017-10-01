@@ -239,16 +239,15 @@ void keyTap(QString key) {
 }
 
 void keyDown(QString key) {
-    qInfo() << key;
     lastKeyDown = key;
-    if(key != "Win" && key != "Alt" && key != "Ctrl")
+    // don't repeat modifiers
+    if(key != "Win" && key != "Alt" && key != "Ctrl" && key != "Esc" && key != "Shift")
         lastKeyStillDown = true;
     lastKeyTime = QDateTime::currentMSecsSinceEpoch();
+
     if(virtualKeyList.contains(key))
         sendSpecialKeyEvent(0, virtualKeyList.value(key));
-    else if(key.startsWith("Brightness"))
-        ; // set brightness in key up
-    else if(key.length() > 0)
+    else if(key.length() == 1)
         sendUnicodeEvent(KEYEVENTF_UNICODE, key.at(0).unicode());
 }
 
