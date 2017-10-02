@@ -240,6 +240,8 @@ void NetworkThread::startInputLoop()
         }
         else if(message == "Quit")
             break;
+        else
+            continue;
 
         if(!zoomEvent)
             FakeInput::stopZoom();
