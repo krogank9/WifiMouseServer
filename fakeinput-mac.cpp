@@ -1,4 +1,6 @@
 #include <ApplicationServices/ApplicationServices.h>
+#include <IOKit/hidsystem/ev_keymap.h>
+#include <IOKit/hidsystem/IOHIDLib.h>
 #include <Carbon/Carbon.h>
 #include <QTimer>
 #include <QDateTime>
@@ -9,16 +11,67 @@
 
 #include "fakeinput.h"
 
-// TODO: Media keys, NX_KEYTYPE_PLAY
-#include <IOKit/hidsystem/ev_keymap.h>
+io_connect_t auxKeyDriverRef;
+bool driverLoaded = false;
+void initAuxKeyDriver()
+{
+    mach_port_t masterPort, service, iter;
+
+    if(IOMasterPort( bootstrap_port, &masterPort ) != KERN_SUCCESS)
+        return;
+
+    if(IOServiceGetMatchingServices(masterPort, IOServiceMatching( kIOHIDSystemClass), &iter ) != KERN_SUCCESS)
+        return;
+
+    service = IOIteratorNext( iter );
+    if(service == 0) {
+        IOObjectRelease(iter);
+        return;
+    }
+
+    if(IOServiceOpen(service, mach_task_self(), kIOHIDParamConnectType, &auxKeyDriverRef ) == KERN_SUCCESS)
+        driverLoaded = true;
+
+    IOObjectRelease(service);
+    IOObjectRelease(iter);
+}
+
+void tapAuxKey(const UInt8 auxKeyCode)
+{
+    if(!driverLoaded)
+        return;
+
+    NXEventData event;
+    IOGPoint loc = { 0, 0 };
+
+    // down
+    UInt32 evtInfo = auxKeyCode << 16 | NX_KEYDOWN << 8;
+    bzero(&event, sizeof(NXEventData));
+    event.compound.subType = NX_SUBTYPE_AUX_CONTROL_BUTTONS;
+    event.compound.misc.L[0] = evtInfo;
+    if(IOHIDPostEvent( auxKeyDriverRef, NX_SYSDEFINED, loc, &event, kNXEventDataVersion, 0, FALSE ) != KERN_SUCCESS)
+        return;
+
+    // up
+    evtInfo = auxKeyCode << 16 | NX_KEYUP << 8;
+    bzero(&event, sizeof(NXEventData));
+    event.compound.subType = NX_SUBTYPE_AUX_CONTROL_BUTTONS;
+    event.compound.misc.L[0] = evtInfo;
+    if(IOHIDPostEvent( auxKeyDriverRef, NX_SYSDEFINED, loc, &event, kNXEventDataVersion, 0, FALSE ) != KERN_SUCCESS)
+        return;
+}
+
+// media & brightness keys
+QMap<QString, UInt8> auxKeyList {
+    {"VolumeUp", NX_KEYTYPE_SOUND_UP}, {"VolumeDown", NX_KEYTYPE_SOUND_DOWN}, {"VolumeMute", NX_KEYTYPE_MUTE},
+    {"PauseSong", NX_KEYTYPE_PLAY}, {"NextSong", NX_KEYTYPE_NEXT}, {"PrevSong", NX_KEYTYPE_PREVIOUS},
+    {"BrightnessUp", NX_KEYTYPE_BRIGHTNESS_UP}, {"BrightnessDown", NX_KEYTYPE_BRIGHTNESS_DOWN},
+};
 
 QMap<QString, CGKeyCode> virtualKeyList {
     {"Return", kVK_Return}, {"BackSpace", kVK_Delete}, {"Ctrl", kVK_Control},
     {"Cmd", kVK_Command}, {"Tab", kVK_Tab}, {"Opt", kVK_Option}, {"Esc", kVK_Escape},
     {"Shift", kVK_Shift}, {"Home", kVK_Home}, {"End", kVK_End},
-
-    {"VolumeUp", kVK_VolumeUp}, {"VolumeDown", kVK_VolumeDown}, {"VolumeMute", kVK_Mute},
-    //{"PauseSong", VK_MEDIA_PLAY_PAUSE}, {"NextSong", VK_MEDIA_NEXT_TRACK}, {"PrevSong", VK_MEDIA_PREV_TRACK},
 
     {"Left", kVK_LeftArrow}, {"Right", kVK_RightArrow}, {"Up", kVK_UpArrow}, {"Down", kVK_DownArrow},
     {"PgU", kVK_PageUp}, {"PgD", kVK_PageDown},
@@ -113,6 +166,8 @@ void initFakeInput() {
     keyRepeaterTimer->setInterval(35);
     keyRepeaterTimer->start();
     QObject::connect(keyRepeaterTimer, &QTimer::timeout, keyRepeatCallback);
+
+    initAuxKeyDriver();
 }
 
 void freeFakeInput() {
@@ -156,6 +211,8 @@ void keyUp(QString key) {
     // todo brightness & media keys in keyup
     if(virtualKeyList.contains(key))
         doKeyboardEvent(virtualKeyList.value(key), false);
+    else if(auxKeyList.contains(key))
+        tapAuxKey(auxKeyList.value(key));
     else if(key.length() == 1)
         typeUniChar(key.at(0).unicode(), false, true);
 }
