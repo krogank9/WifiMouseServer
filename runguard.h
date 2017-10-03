@@ -1,5 +1,3 @@
-/* Author: Dmitry Sazonov * StackOverflow: stackoverflow.com/a/28172162/882600 * Used with permission from original author. */
-
 #ifndef RUNGUARD_H
 #define RUNGUARD_H
 
