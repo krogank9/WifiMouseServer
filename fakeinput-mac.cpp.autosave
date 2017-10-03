@@ -430,6 +430,7 @@ QString getProcesses() {
 
     // todo split process (last element) to last / to get simpler program name
     QStringList processes = runCommandForResult("ps ux | awk '{print $2,$3,$4,$11}' | tail -n +2 | grep -vE '/System|libexec|.*awk$|.*ps$|.*tail|.*bash$|.*grep$|.*/bin/sh$|login$|Framework|Automator'").split("\n");
+    
 }
 
 void killProcess(QString pid) {
