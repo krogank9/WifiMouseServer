@@ -427,9 +427,29 @@ QString getRamUsage()
 
 QString getProcesses() {
     // pid / cpu / mem / name
+    QStringList processes = runCommandForResult("ps ux | awk '{print $2,$3,$4,$11}' | tail -n +2 | grep -vE '/System|libexec|awk$|ps$|tail$|bash$|grep$|/bin/sh$|login$|Framework|Automator|distnoted$|cfprefsd$|usernoted$'").split("\n");
+    QStringList duplicates;
 
-    // todo split process (last element) to last / to get simpler program name
-    QStringList processes = runCommandForResult("ps ux | awk '{print $2,$3,$4,$11}' | tail -n +2 | grep -vE '/System|libexec|.*awk$|.*ps$|.*tail|.*bash$|.*grep$|.*/bin/sh$|login$|Framework|Automator'").split("\n");
+    // split process name (last element) to last / to get simpler program name
+    for(int i=0; i<processes.length(); i++) {
+        QString process = processes[i];
+        QStringList comp = process.split(" ");
+        if(comp.length() < 4)
+            continue;
+        QString pid = comp.takeFirst();
+        QString cpu = comp.takeFirst();
+        QString mem = comp.takeFirst();
+        QString name = comp.join(" ");
+        name = name.remove(0, name.lastIndexOf("/")+1);
+        if(duplicates.contains(name)) {
+            processes.removeAt(i);
+            i--;
+            continue;
+        }
+        duplicates.append(name);
+        processes[i] = pid + " " + cpu + " " + mem + " " + name;
+    }
+
     return processes.join("\n");
 }
 
