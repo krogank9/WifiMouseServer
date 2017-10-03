@@ -18,6 +18,7 @@ win32 {
 macx {
     LIBS += -framework ApplicationServices
     SOURCES += fakeinput-mac.cpp
+    ICON = $${PWD}/MacIcon.icns
 }
 linux {
     LIBS += -lxdo
