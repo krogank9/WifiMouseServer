@@ -66,12 +66,8 @@ void tapAuxKey(const UInt8 auxKeyCode)
 QMap<QString, UInt8> auxKeyList {
     {"VolumeUp", NX_KEYTYPE_SOUND_UP}, {"VolumeDown", NX_KEYTYPE_SOUND_DOWN}, {"VolumeMute", NX_KEYTYPE_MUTE},
     {"PauseSong", NX_KEYTYPE_PLAY}, {"NextSong", NX_KEYTYPE_NEXT}, {"PrevSong", NX_KEYTYPE_PREVIOUS},
-<<<<<<< HEAD
     {"BrightnessUp", NX_KEYTYPE_BRIGHTNESS_UP}, {"BrightnessDown", NX_KEYTYPE_BRIGHTNESS_DOWN},
     {"Eject", NX_KEYTYPE_EJECT}
-=======
-    {"BrightnessUp", NX_KEYTYPE_BRIGHTNESS_UP}, {"BrightnessDown", NX_KEYTYPE_BRIGHTNESS_DOWN}
->>>>>>> 9f82aeeec14146641fb7bfb5bdd4dfb32ed1dd89
 };
 
 QMap<QString, CGKeyCode> virtualKeyList {

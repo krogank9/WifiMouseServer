@@ -244,12 +244,6 @@ void NetworkThread::startInputLoop()
             break;
         else
             continue;
-<<<<<<< HEAD
-=======
-
-        if(!zoomEvent)
-            FakeInput::stopZoom();
->>>>>>> 9f82aeeec14146641fb7bfb5bdd4dfb32ed1dd89
     }
     FakeInput::stopZoom();
 }
