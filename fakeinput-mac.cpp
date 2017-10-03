@@ -7,6 +7,7 @@
 #include <QDebug>
 #include <QString>
 #include <QMap>
+#include <QProcess>
 #include <unistd.h>
 
 #include "fakeinput.h"
@@ -65,13 +66,20 @@ void tapAuxKey(const UInt8 auxKeyCode)
 QMap<QString, UInt8> auxKeyList {
     {"VolumeUp", NX_KEYTYPE_SOUND_UP}, {"VolumeDown", NX_KEYTYPE_SOUND_DOWN}, {"VolumeMute", NX_KEYTYPE_MUTE},
     {"PauseSong", NX_KEYTYPE_PLAY}, {"NextSong", NX_KEYTYPE_NEXT}, {"PrevSong", NX_KEYTYPE_PREVIOUS},
+<<<<<<< HEAD
+    {"BrightnessUp", NX_KEYTYPE_BRIGHTNESS_UP}, {"BrightnessDown", NX_KEYTYPE_BRIGHTNESS_DOWN},
+    {"Eject", NX_KEYTYPE_EJECT}
+=======
     {"BrightnessUp", NX_KEYTYPE_BRIGHTNESS_UP}, {"BrightnessDown", NX_KEYTYPE_BRIGHTNESS_DOWN}
+>>>>>>> 9f82aeeec14146641fb7bfb5bdd4dfb32ed1dd89
 };
 
 QMap<QString, CGKeyCode> virtualKeyList {
     {"Return", kVK_Return}, {"BackSpace", kVK_Delete}, {"Ctrl", kVK_Control},
     {"Cmd", kVK_Command}, {"Tab", kVK_Tab}, {"Opt", kVK_Option}, {"Esc", kVK_Escape},
     {"Shift", kVK_Shift}, {"Home", kVK_Home}, {"End", kVK_End},
+
+    {"=", kVK_ANSI_Equal}, {"-", kVK_ANSI_Minus},
 
     {"Left", kVK_LeftArrow}, {"Right", kVK_RightArrow}, {"Up", kVK_UpArrow}, {"Down", kVK_DownArrow},
     {"PgU", kVK_PageUp}, {"PgD", kVK_PageDown},
@@ -271,24 +279,109 @@ void mouseScroll(int amount) {
     CFRelease(scroll);
 }
 
-void zoom(int amount) {}
-void stopZoom() {}
+bool zooming = false;
 
-QString getApplicationNames() { return ""; }
-void startApplicationByName(QString name) {}
+void stopZoom() {
+    if(zooming) {
+        keyUp("Cmd");
+        zooming = false;
+    }
+}
+
+void zoom(int amount) {
+    if(!zooming) {
+        zooming = true;
+        keyDown("Cmd");
+    }
+    else
+        mouseScroll(amount*-1);
+}
+
+QString runCommandForResult(QString command) {
+    QProcess cmd;
+    // trick to startDetached process and still read its output, use sh.
+    // does not work with bash
+    cmd.start("/bin/sh", QStringList()<< "-c" << command);
+    cmd.waitForFinished(250);
+    return cmd.readAllStandardOutput() + cmd.readAllStandardError();
+}
+
+QString getApplicationNames() {
+    return runCommandForResult("find /Applications/. -maxdepth 3 -type d | grep '.app$' | rev | cut -d '/' -f1 | rev | cut -d '.' -f1");
+}
+void startApplicationByName(QString name) {
+    runCommandForResult("open -a "+name);
+}
 
 QString getCommandSuggestions(QString command) { return ""; }
-QString runCommandForResult(QString command) { return ""; }
-QString getCpuUsage() { return ""; }
-QString getRamUsage() { return ""; }
-QString getProcesses() { return ""; }
-void killProcess(QString pid) {}
 
-void shutdown() {}
-void restart() {}
-void logout() {}
-void sleep() {}
-void lock_screen() {}
-void blank_screen() {}
+QString getCpuUsage() { return ""; }
+
+static double ParseMemValue(const char * b)
+{
+   while((*b)&&(isdigit(*b) == false)) b++;
+   return isdigit(*b) ? atof(b) : -1.0;
+}
+
+QString getRamUsage()
+{
+   FILE * fpIn = popen("/usr/bin/vm_stat", "r");
+   if (fpIn)
+   {
+      double pagesUsed = 0.0, totalPages = 0.0;
+      char buf[512];
+      while(fgets(buf, sizeof(buf), fpIn) != NULL)
+      {
+         if (strncmp(buf, "Pages", 5) == 0)
+         {
+            double val = ParseMemValue(buf);
+            if (val >= 0.0)
+            {
+               if ((strncmp(buf, "Pages wired", 11) == 0)||(strncmp(buf, "Pages active", 12) == 0)) pagesUsed += val;
+               totalPages += val;
+            }
+         }
+         else if (strncmp(buf, "Mach Virtual Memory Statistics", 30) != 0) break;  // Stop at "Translation Faults", we don't care about anything at or below that
+      }
+      pclose(fpIn);
+
+      pagesUsed *= getpagesize()/1024;
+      totalPages *= getpagesize()/1024;
+      // round to x.xx GB's
+      pagesUsed /= 10000; pagesUsed = (int)pagesUsed; pagesUsed *= 10000;
+      totalPages /= 10000; totalPages = (int)totalPages; totalPages *= 10000;
+      qInfo() << pagesUsed << "/" << totalPages;
+      return QString::number((int) (pagesUsed) ) + " " + QString::number((int) (totalPages) );
+   }
+   return "";
+}
+
+QString getProcesses() {
+    // pid / cpu / mem / name
+    return runCommandForResult("ps ux | awk '{print $2,$3,$4,$11}' | tail -n +2 | grep -vE '/System|libexec|.*awk$|.*ps$|.*tail|.*bash$|.*/bin/sh$|login$|Framework|Automator'");
+}
+
+void killProcess(QString pid) {
+    runCommandForResult("kill -9 "+pid);
+}
+
+void shutdown() {
+    runCommandForResult("osascript -e 'tell app \"System Events\" to shut down'");
+}
+void restart() {
+    runCommandForResult("osascript -e 'tell app \"System Events\" to restart'");
+}
+void logout() {
+    runCommandForResult("osascript -e 'tell app \"System Events\" to log out'");
+}
+void sleep() {
+    runCommandForResult("osascript -e 'tell app \"System Events\" to sleep'");
+}
+void lock_screen() {
+    runCommandForResult("/System/Library/CoreServices/Menu\ Extras/User.menu/Contents/Resources/CGSession -suspend");
+}
+void blank_screen() {
+    runCommandForResult("pmset displaysleepnow");
+}
 
 }

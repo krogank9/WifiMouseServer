@@ -127,6 +127,8 @@ void NetworkThread::startInputLoop()
 
         bool zoomEvent = false;
         qint64 lastZoomEvent = 0;
+        if(message.startsWith("Zoom") == false && message != "PING")
+            FakeInput::stopZoom();
 
         if(message == "PING") {
             if( memcmp(getPassword().data(), getSessionHash().data(), 16) != 0)
@@ -134,11 +136,11 @@ void NetworkThread::startInputLoop()
             qInfo() << "Pinging... " << ++pingCount << "\n";
             writeString("PING", true);
 
+            // stop zooming if last event was >1s ago
             if(QDateTime::currentMSecsSinceEpoch() - lastZoomEvent < 1000)
                 continue;
         }
-
-        if(message.startsWith("MouseMove ")) {
+        else if(message.startsWith("MouseMove ")) {
             message.remove("MouseMove ");
             QStringList coords = message.split(",");
             int x = ((QString)coords.at(0)).toInt();
@@ -242,9 +244,12 @@ void NetworkThread::startInputLoop()
             break;
         else
             continue;
+<<<<<<< HEAD
+=======
 
         if(!zoomEvent)
             FakeInput::stopZoom();
+>>>>>>> 9f82aeeec14146641fb7bfb5bdd4dfb32ed1dd89
     }
     FakeInput::stopZoom();
 }
