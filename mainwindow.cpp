@@ -153,12 +153,13 @@ void MainWindow::startSvgAnimation()
 
     QTimer *logoTimer = new QTimer(this);
     connect(logoTimer, SIGNAL(timeout()), this, SLOT(updateLogoAnimation()));
-    logoTimer->start(10);//120fps to ensure smooth animation
+    logoTimer->start(20);
 }
 
 void MainWindow::clickMaximized()
 {
     this->show();
+    this->activateWindow();
     //trayIcon->hide();
 }
 
