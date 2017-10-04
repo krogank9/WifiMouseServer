@@ -2,37 +2,29 @@
 #include "mainwindow.h"
 #include "fakeinput.h"
 #include "abstractedserver.h"
+#include "abstractedsocket.h"
 #include "encryptutils.h"
-#include "socketutils.h"
 #include "fileutils.h"
 #include <QDebug>
 #include <QDateTime>
 #include <QAbstractSocket>
 #include <QHostInfo>
 
-using namespace SocketUtils;
-
 QString serverVersion = "1";
 
 /****************************************
  ****************************************
  **
- ** Connection search & verify code
+ ** Listen for connections & verify clients
  **
  ****************************************
  ****************************************/
 
-NetworkThread::NetworkThread(QObject *parent) : QThread(parent) {
-    FakeInput::initFakeInput();
-}
-
-NetworkThread::~NetworkThread() {
-    FakeInput::freeFakeInput();
-}
-
 void NetworkThread::run()
 {
-   AbstractedServer server(this);
+   AbstractedServer server;
+
+   FakeInput::initFakeInput();
 
    int count = 0;
    while(!isInterruptionRequested()) {
@@ -40,47 +32,47 @@ void NetworkThread::run()
        qInfo() << "Listening for connection... " << ++count;
        server.listenWithTimeout(1000);
 
-       QIODevice *socket = server.nextPendingConnection();
+       AbstractedSocket *socket = server.nextPendingConnection();
        if(socket == 0)
            continue;
-       else
-           setGlobalSocket(socket, server.pendingIsBluetooth);
 
-       if( verifyClient() ) {
+       if( verifyClient(socket) ) {
            updateClientIp(server.pendingSocketInfo);
 
            qInfo() << "Client verified\n";
-           startInputLoop();
+           startInputLoop(socket);
        }
        else
            qInfo() << "Could not verify client";
 
        delete socket;
    }
+
+   FakeInput::freeFakeInput();
 }
 
-bool NetworkThread::verifyClient()
+bool NetworkThread::verifyClient(AbstractedSocket *socket)
 {
     srand(QDateTime::currentMSecsSinceEpoch());
     long sessionIV = rand() % JAVA_INT_MAX_VAL;
-    SocketUtils::initSession(sessionIV, getPassword());
+    socket->initSession(sessionIV, getPassword());
 
     // First inform we are a server and send sessionIV:
-    if(readString(false) == "cow.emoji.WifiMouseClient") {
+    if(socket->readString(false) == "cow.emoji.WifiMouseClient") {
         qInfo() << "unencrypted verified";
         QString hello_str = "cow.emoji.WifiMouseServer "+serverVersion+" "+QHostInfo::localHostName().replace(" ", "-")+" "+FakeInput::getOsName()+" "+QString::number(sessionIV);
-        writeString(hello_str, false);
+        socket->writeString(hello_str, false);
     }
     else
         return false;
 
     // Then, verify client by decoding its encrypted message:
-    if(readString(true) == "cow.emoji.WifiMouseClient") {
-        writeString("Verified", false);
+    if(socket->readString(true) == "cow.emoji.WifiMouseClient") {
+        socket->writeString("Verified", false);
         return true;
     }
     else {
-        writeString("Wrong password", false);
+        socket->writeString("Wrong password", false);
         return false;
     }
 }
@@ -100,7 +92,7 @@ void NetworkThread::updateClientIp(QString ip)
 /****************************************
  ****************************************
  **
- ** Input loop & server code
+ ** Input loop entered once client is verified
  **
  ****************************************
  ****************************************/
@@ -114,27 +106,26 @@ void specialKeyCombo(QString comboString) {
         FakeInput::keyUp(keyList.at(i));
 }
 
-void NetworkThread::startInputLoop()
+void NetworkThread::startInputLoop(AbstractedSocket *socket)
 {
     int pingCount = 0;
     while(!isInterruptionRequested()) {
-        if( !waitForReadyRead(1000) ) {
+        if( !socket->waitForReadyRead(1000) ) {
             qInfo() << "Read timed out...\n";
             break;
         }
 
-        QString message = readString(true);
+        QString message = socket->readString(true);
 
-        bool zoomEvent = false;
         qint64 lastZoomEvent = 0;
         if(message.startsWith("Zoom") == false && message != "PING")
             FakeInput::stopZoom();
 
         if(message == "PING") {
-            if( memcmp(getPassword().data(), getSessionHash().data(), 16) != 0)
+            if( memcmp(getPassword().data(), socket->getSessionHash().data(), 16) != 0)
                 break;
             qInfo() << "Pinging... " << ++pingCount << "\n";
-            writeString("PING", true);
+            socket->writeString("PING", true);
 
             // stop zooming if last event was >1s ago
             if(QDateTime::currentMSecsSinceEpoch() - lastZoomEvent < 1000)
@@ -182,7 +173,6 @@ void NetworkThread::startInputLoop()
             message.remove("SpecialKeyCombo ");
             specialKeyCombo(message);
         } else if(message.startsWith("Zoom ")) {
-            zoomEvent = true;
             lastZoomEvent = QDateTime::currentMSecsSinceEpoch();
             message.remove("Zoom ");
             FakeInput::zoom(message.toInt());
@@ -202,38 +192,38 @@ void NetworkThread::startInputLoop()
                 FakeInput::lock_screen();
         } else if(message.startsWith("FileManager ")) {
             message = message.remove(0, QString("FileManager ").length());
-            FileUtils::fileManagerCommand(message);
+            FileUtils::fileManagerCommand(message, socket);
         } else if(message.startsWith("ScreenMirror ")) {
             message = message.remove("ScreenMirror ");
-            FileUtils::sendScreenJPG( message );
+            FileUtils::sendScreenJPG(message, socket);
         } else if(message.startsWith("Command ")) {
             message = message.remove(0, QString("Command ").length());
             if(message.startsWith("Run ")) {
                 message = message.remove(0, QString("Run ").length());
                 QString result = FakeInput::runCommandForResult(message);
-                writeString(result, true);
+                socket->writeString(result, true);
             }
             else if(message.startsWith("Suggest ")) {
                 message = message.remove(0, QString("Suggest ").length());
                 QString suggestions = FakeInput::getCommandSuggestions(message);
-                writeString(suggestions, true);
+                socket->writeString(suggestions, true);
             }
         }
         else if(message == "GetApplications") {
-            writeString(FakeInput::getApplicationNames(), true);
+            socket->writeString(FakeInput::getApplicationNames(), true);
         }
         else if(message.startsWith("StartApplication ")) {
             message = message.remove(0, QString("StartApplication ").length());
             FakeInput::startApplicationByName(message);
         }
         else if(message == "GetCpuUsage") {
-            writeString(FakeInput::getCpuUsage(), true);
+            socket->writeString(FakeInput::getCpuUsage(), true);
         }
         else if(message == "GetRamUsage") {
-            writeString(FakeInput::getRamUsage(), true);
+            socket->writeString(FakeInput::getRamUsage(), true);
         }
         else if(message == "GetTasks") {
-            writeString(FakeInput::getProcesses(), true);
+            socket->writeString(FakeInput::getProcesses(), true);
         }
         else if(message.startsWith("KillPID")) {
             message = message.remove("KillPID");
@@ -242,8 +232,6 @@ void NetworkThread::startInputLoop()
         }
         else if(message == "Quit")
             break;
-        else
-            continue;
     }
     FakeInput::stopZoom();
 }

@@ -5,16 +5,18 @@
 #include <QBluetoothServer>
 #include <QBluetoothServiceInfo>
 #include <QEventLoop>
+#include <QTimer>
+#include "abstractedsocket.h"
 
 class AbstractedServer : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit AbstractedServer(QObject *parent = 0);
+    AbstractedServer();
     ~AbstractedServer();
 
-    QIODevice *nextPendingConnection();
+    AbstractedSocket *nextPendingConnection();
     void listenWithTimeout(qint16 timeoutMs);
     void trySetupServers();
 
@@ -23,19 +25,21 @@ public:
 
 private:
     QEventLoop eventLoop;
+    QTimer timeoutTimer;
 
     bool registerBluetoothService();
     bool bluetoothServerListen();
     bool tcpServerListen();
-    QTcpServer tcpServer;
     QBluetoothServer bluetoothServer;
     QBluetoothServiceInfo serviceInfo;
+    QTcpServer tcpServer;
 
     QIODevice *pendingSocket;
 
 public slots:
     void newTcpConnection();
     void newBluetoothConnection();
+    void timeout();
 
 signals:
     void newConnection();

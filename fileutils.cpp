@@ -1,5 +1,4 @@
 #include "fileutils.h"
-#include "socketutils.h"
 #include <QFileInfoList>
 #include <QDesktopServices>
 #include <QUrl>
@@ -13,8 +12,6 @@
 #include <QBuffer>
 #include <QDebug>
 #include <QRect>
-
-using namespace SocketUtils;
 
 QDir dir = QDir::home();
 QFileInfo copied;
@@ -34,39 +31,36 @@ QFileInfo getFileInfo(QString name)
 namespace FileUtils
 {
 
-void home()
+void home(AbstractedSocket *socket)
 {
     dir = QDir::home();
-    writeString("Success", true);
+    socket->writeString("Success", true);
 }
 
-void up()
+void up(AbstractedSocket *socket)
 {
-    if(dir.cdUp())
-        writeString("Success", true);
-    else
-        writeString("Failed", true);
+    socket->writeString(dir.cdUp()?"Success":"Failed", true);
 }
 
-void refresh()
+void refresh(AbstractedSocket *socket)
 {
     QFileInfoList fileInfoList = dir.entryInfoList(QDir::NoFilter, QDir::DirsFirst | QDir::Name);
-    SocketUtils::writeString(QString::number(fileInfoList.length()), true);
+    socket->writeString(QString::number(fileInfoList.length()), true);
     for(int i=0; i<fileInfoList.length(); i++) {
         QFileInfo info = fileInfoList.at(i);
-        writeString(info.fileName(), true);
-        writeString(info.isDir()? "true":"false", true);
+        socket->writeString(info.fileName(), true);
+        socket->writeString(info.isDir()? "true":"false", true);
     }
 }
 
-void open(QString name)
+void open(QString name, AbstractedSocket *socket)
 {
     QFileInfoList fileInfoList = dir.entryInfoList(QDir::NoFilter, QDir::DirsFirst | QDir::Name);
 
     QFileInfo file = getFileInfo(name);
 
     if(file.fileName().length() == 0) {
-        writeString("Failed", true);
+        socket->writeString("Failed", true);
         return;
     }
     else if(file.isDir()) {
@@ -76,33 +70,33 @@ void open(QString name)
         QDesktopServices::openUrl( QUrl::fromLocalFile(file.absoluteFilePath()) );
     }
 
-    writeString("Success", true);
+    socket->writeString("Success", true);
 }
 
-void copy(QString name)
+void copy(QString name, AbstractedSocket *socket)
 {
     QFileInfo file = getFileInfo(name);
     if(file.fileName().length() > 0) {
         copied = file;
         cutting = false;
         qInfo() << "copying " << file.fileName();
-        writeString("Success", true);
+        socket->writeString("Success", true);
     }
     else {
-        writeString("Failed", true);
+        socket->writeString("Failed", true);
     }
 }
 
-void cut(QString name)
+void cut(QString name, AbstractedSocket *socket)
 {
     QFileInfo file = getFileInfo(name);
     if(file.fileName().length() > 0) {
         copied = file;
         cutting = true;
-        writeString("Success", true);
+        socket->writeString("Success", true);
     }
     else {
-        writeString("Failed", true);
+        socket->writeString("Failed", true);
     }
 }
 
@@ -131,7 +125,7 @@ bool cpDir(const QString &srcPath, const QString &dstPath)
     return true;
 }
 
-void paste(QString dirName)
+void paste(QString dirName, AbstractedSocket *socket)
 {
     QFileInfo dirInfo = getFileInfo(dirName);
     if(dirInfo.isDir() == false)
@@ -150,13 +144,13 @@ void paste(QString dirName)
         if(cutting) {
             if( dirToCopy.rename(dirToCopy.absolutePath(), destinationName) ) {
                 cutting = false;
-                writeString("Success", true);
+                socket->writeString("Success", true);
                 return;
             }
         }
         else {
             if( cpDir(dirToCopy.absolutePath(), destinationName) ) {
-                writeString("Success", true);
+                socket->writeString("Success", true);
                 return;
             }
         }
@@ -167,55 +161,55 @@ void paste(QString dirName)
             if( file.rename(destinationName) ) {
                 cutting = false;
                 copied = QFileInfo(destinationName);
-                writeString("Success", true);
+                socket->writeString("Success", true);
                 return;
             }
         }
         else {
             if( file.copy(destinationName) ) {
                 qInfo() << "pasted to" << destinationName;
-                writeString("Success", true);
+                socket->writeString("Success", true);
                 return;
             }
         }
     }
 
-    writeString("Failed", true);
+    socket->writeString("Failed", true);
 }
 
-void deleteCmd(QString name)
+void deleteCmd(QString name, AbstractedSocket *socket)
 {
     QFileInfo info = getFileInfo(name);
     if(info.fileName().length() == 0) {
-        writeString("Failed", true);
+        socket->writeString("Failed", true);
         return;
     }
 
     if(info.isDir()) {
         QDir dir(info.absoluteFilePath());
         if(dir.removeRecursively()) {
-            writeString("Success", true);
+            socket->writeString("Success", true);
         }
         else {
-            writeString("Failed", true);
+            socket->writeString("Failed", true);
         }
     }
     else {
         QFile file(info.absoluteFilePath());
         if(file.remove()) {
-            writeString("Success", true);
+            socket->writeString("Success", true);
         }
         else {
-            writeString("Failed", true);
+            socket->writeString("Failed", true);
         }
     }
 }
 
-void details(QString name)
+void details(QString name, AbstractedSocket *socket)
 {
     QFileInfo info = getFileInfo(name);
     if(info.fileName().length() == 0) {
-        writeString("Failed", true);
+        socket->writeString("Failed", true);
         return;
     }
 
@@ -226,41 +220,41 @@ void details(QString name)
     details += "Created: " + info.created().toString() + "\n";
     details += "Modified: " + info.lastModified().toString();
 
-    writeString(details, true);
+    socket->writeString(details, true);
 }
 
-void sendFileForDownload(QString name)
+void sendFileForDownload(QString name, AbstractedSocket *socket)
 {
     qInfo() << "sending file";
     QFileInfo info = getFileInfo(name);
     QFile file(info.absoluteFilePath());
     if(file.exists() && file.open(QIODevice::ReadOnly)) {
-        writeString("Sending", true);
+        socket->writeString("Sending", true);
         QByteArray fileBytes = file.readAll();
         file.close();
-        if( writeDataEncrypted(fileBytes) )
+        if( socket->writeDataEncrypted(fileBytes) )
             qInfo() << "sent file";
         else
             qInfo() << "failed to send file";
     }
     else {
-        writeString("Failed", true);
+        socket->writeString("Failed", true);
     }
 }
 
-void receiveSentFile(QString name)
+void receiveSentFile(QString name, AbstractedSocket *socket)
 {
     // Make sure ready to receive file & can write
     QFile toWrite(dir.absolutePath() + "/" + name);
     if( toWrite.open(QIODevice::WriteOnly) )
-        writeString("Ready", true);
+        socket->writeString("Ready", true);
     else
-        writeString("Failed", true);
+        socket->writeString("Failed", true);
 
     // Receive the file
-    QByteArray fileBytes = readDataEncrypted();
+    QByteArray fileBytes = socket->readDataEncrypted();
     qInfo() << fileBytes.length();
-    writeString("Success", true);
+    socket->writeString("Success", true);
 
     // Write it to a file with given name
     int writtenSoFar = 0;
@@ -269,7 +263,7 @@ void receiveSentFile(QString name)
         int writtenThisTime = toWrite.write(fileBytes.data() + writtenSoFar, remainingBytes);
 
         if(writtenThisTime <= 0) {
-            writeString("Failed", true);
+            socket->writeString("Failed", true);
             return;
         }
         else
@@ -281,34 +275,34 @@ void receiveSentFile(QString name)
     qInfo() << "successfully wrote file";
 }
 
-void fileManagerCommand(QString command)
+void fileManagerCommand(QString command, AbstractedSocket *socket)
 {
     if(command == "Refresh") {
-        refresh();
+        refresh(socket);
     } else if(command == "Home") {
-        home();
+        home(socket);
     } else if(command == "Up") {
-        up();
+        up(socket);
     } else if(command.startsWith("Open ")) {
-        open(command.remove(0, QString("Open ").length()));
+        open(command.remove(0, QString("Open ").length()), socket);
     } else if(command.startsWith("Copy ")) {
-        copy(command.remove(0, QString("Copy ").length()));
+        copy(command.remove(0, QString("Copy ").length()), socket);
     } else if(command.startsWith("Cut ")) {
-        cut(command.remove(0, QString("Cut ").length()));
+        cut(command.remove(0, QString("Cut ").length()), socket);
     } else if(command.startsWith("Paste ")) {
-        paste(command.remove(0, QString("Paste ").length()));
+        paste(command.remove(0, QString("Paste ").length()), socket);
     } else if(command.startsWith("Delete ")) {
-        deleteCmd(command.remove(0, QString("Delete ").length()));
+        deleteCmd(command.remove(0, QString("Delete ").length()), socket);
     } else if(command.startsWith("Details ")) {
-        details(command.remove(0, QString("Details ").length()));
+        details(command.remove(0, QString("Details ").length()), socket);
     } else if(command.startsWith("Download ")) {
-        sendFileForDownload(command.remove(0, QString("Download ").length()));
+        sendFileForDownload(command.remove(0, QString("Download ").length()), socket);
     } else if(command.startsWith("Send ")) {
-        receiveSentFile(command.remove(0, QString("Send ").length()));
+        receiveSentFile(command.remove(0, QString("Send ").length()), socket);
     }
 }
 
-void sendScreenJPG(QString opts)
+void sendScreenJPG(QString opts, AbstractedSocket *socket)
 {
     QStringList optList = opts.split(" ");
     int quality = optList.at(0).toInt();
@@ -340,7 +334,7 @@ void sendScreenJPG(QString opts)
 
     qInfo() << "quality" << quality;
 
-    writeDataEncrypted(jpgBytes);
+    socket->writeDataEncrypted(jpgBytes);
 }
 
 }

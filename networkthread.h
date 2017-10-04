@@ -2,23 +2,19 @@
 #define NETWORKTHREAD_H
 
 #include <QThread>
-#include <QTcpServer>
-#include <QTcpSocket>
 #include <QString>
-#include <QEventLoop>
 #include "mainwindow.h"
+#include "abstractedsocket.h"
 
 class NetworkThread : public QThread
 {
 public:
-    NetworkThread(QObject *parent = nullptr);
-    ~NetworkThread();
     void run();
     MainWindow *mainWindow;
 private:
     QByteArray getPassword();
-    bool verifyClient();
-    void startInputLoop();
+    bool verifyClient(AbstractedSocket *socket);
+    void startInputLoop(AbstractedSocket *socket);
     void updateClientIp(QString ip);
 };
 

@@ -6,10 +6,11 @@
 #include <QThread>
 #include "fakeinput.h"
 
-AbstractedServer::AbstractedServer(QObject *parent)
+AbstractedServer::AbstractedServer()
 : bluetoothServer(QBluetoothServiceInfo::RfcommProtocol, this),
   tcpServer(this),
   eventLoop(this),
+  timeoutTimer(this),
   pendingSocket(0)
 {
     tcpServer.setMaxPendingConnections(1);
@@ -17,7 +18,9 @@ AbstractedServer::AbstractedServer(QObject *parent)
 
     QObject::connect(&tcpServer, SIGNAL(newConnection()), this, SLOT(newTcpConnection()));
     QObject::connect(&bluetoothServer, SIGNAL(newConnection()), this, SLOT(newBluetoothConnection()));
+    QObject::connect(&timeoutTimer, SIGNAL(timeout()), this, SLOT(timeout()));
 
+    timeoutTimer.setSingleShot(true);
     trySetupServers();
 }
 
@@ -29,6 +32,7 @@ AbstractedServer::~AbstractedServer()
 
 void AbstractedServer::newTcpConnection()
 {
+    eventLoop.quit();
     QTcpSocket *tcpSocket = tcpServer.nextPendingConnection();
     tcpSocket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
 
@@ -49,7 +53,7 @@ void AbstractedServer::newTcpConnection()
 
 void AbstractedServer::newBluetoothConnection()
 {
-    qInfo() << "new bluetooth connection";
+    eventLoop.quit();
     QBluetoothSocket *bluetoothSocket = bluetoothServer.nextPendingConnection();
 
     if(pendingSocket == 0) {
@@ -62,10 +66,14 @@ void AbstractedServer::newBluetoothConnection()
         delete bluetoothSocket;
 }
 
-QIODevice *AbstractedServer::nextPendingConnection()
+AbstractedSocket *AbstractedServer::nextPendingConnection()
 {
-    QIODevice *ret = pendingSocket;
+    if(pendingSocket == 0)
+        return 0;
+
+    AbstractedSocket *ret = new AbstractedSocket(pendingSocket, pendingIsBluetooth);
     pendingSocket = 0;
+
     return ret;
 }
 
@@ -121,21 +129,25 @@ bool AbstractedServer::tcpServerListen()
     return true;
 }
 
+void AbstractedServer::timeout() {
+    eventLoop.quit();
+}
+
 void AbstractedServer::listenWithTimeout(qint16 timeoutMs)
 {
-    QThread *curThread = QThread::currentThread();
     trySetupServers();
-    QTime stopWatch;
-    stopWatch.start();
-    eventLoop.processEvents();
-    while(stopWatch.elapsed() < timeoutMs && pendingSocket == 0 && (curThread && !curThread->isInterruptionRequested())) {
-        FakeInput::platformIndependentSleepMs(100); // sleep for cpu
-        eventLoop.processEvents();
+    qint64 until = QDateTime::currentMSecsSinceEpoch() + timeoutMs;
 
-        if(tcpServer.hasPendingConnections())
-            newTcpConnection();
-        else if(bluetoothServer.hasPendingConnections())
-            newBluetoothConnection();
+    while(!tcpServer.hasPendingConnections()
+          && !bluetoothServer.hasPendingConnections()
+          && !QThread::currentThread()->isInterruptionRequested()
+          && QDateTime::currentMSecsSinceEpoch() < until) {
+        timeoutTimer.setInterval(until - QDateTime::currentMSecsSinceEpoch());
+        timeoutTimer.start();
+
+        eventLoop.exec();
+
+        timeoutTimer.stop();
     }
 }
 

@@ -74,7 +74,7 @@ void typeChar(ushort c) {
         xdo_send_keysequence_window(xdoInstance, CURRENTWINDOW, unicodeHex.toLocal8Bit().data(), 95000);
     }
     else {
-        char str[] = {c, '\0'};
+        char str[] = {(char)c, '\0'};
         xdo_enter_text_window(xdoInstance, CURRENTWINDOW, str, 12000);
     }
 }

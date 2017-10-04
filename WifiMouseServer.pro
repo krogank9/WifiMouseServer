@@ -40,7 +40,7 @@ SOURCES += main.cpp\
     encryptutils.cpp \
     aes.c \
     fileutils.cpp \
-    socketutils.cpp
+    abstractedsocket.cpp
 
 HEADERS  += mainwindow.h \
     fixedsvgwidget.h \
@@ -53,7 +53,7 @@ HEADERS  += mainwindow.h \
     encryptutils.h \
     aes.h \
     fileutils.h \
-    socketutils.h
+    abstractedsocket.h
 
 FORMS    += mainwindow.ui \
     setpassworddialog.ui

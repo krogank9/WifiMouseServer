@@ -24,6 +24,7 @@ int main(int argc, char *argv[])
     networkThread.start();
     int result = a.exec();
 
+    networkThread.exit();
     networkThread.requestInterruption();
     networkThread.wait(5000);
 
