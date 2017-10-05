@@ -22,6 +22,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     this->setWindowIcon(*programIcon);
     this->setFixedSize(this->geometry().width(),this->geometry().height());
+
     this->setWindowFlags(Qt::Dialog | Qt::WindowTitleHint);
 
     rotatingSquare = new RotatingSquare(0, 0, 0, this->width()/7, 35, 35, 35);
@@ -32,6 +33,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
     createActions();
     createTrayIcon();
+
+#ifdef Q_OS_MAC
+    ui->minimizeButton->hide();
+    ui->quitButton->hide();
+    ui->l_mid_spacer->changeSize(0,0);
+    ui->r_mid_spacer->changeSize(0,0);
+#endif
 
     if(ui->startMinimizedCheck->isChecked() == false)
         this->show();
@@ -159,13 +167,17 @@ void MainWindow::startSvgAnimation()
 void MainWindow::clickMaximized()
 {
     this->show();
+    this->showMaximized();
     this->activateWindow();
     //trayIcon->hide();
 }
 
 void MainWindow::clickMinimized()
 {
+    this->showMinimized();
+#ifndef Q_OS_MAC
     this->hide();
+#endif
     //trayIcon->show();
 }
 
@@ -205,7 +217,10 @@ void MainWindow::createTrayIcon()
 {
     trayIcon = new QSystemTrayIcon(this);
     trayIcon->setIcon(*programIcon);
+
+#ifndef Q_OS_MAC
     trayIcon->show();
+#endif
 
     trayIconMenu = new QMenu(this);
     trayIconMenu->addAction(clientTitleAction);
