@@ -185,6 +185,13 @@ void freeFakeInput() {
 void typeChar(ushort c) {
     if(c == '\n')
         keyTap("Return");
+    else if(virtualKeyList.contains(QString(QChar(c))))
+        keyTap(QChar(c));
+    else if(virtualKeyList.contains(QString(QChar(c).toLower()))) {
+        keyDown("Shift");
+        keyTap(QChar(c).toLower());
+        keyUp("Shift");
+    }
     else
         typeUniChar(c);
 }
@@ -216,7 +223,6 @@ void keyDown(QString key) {
 void keyUp(QString key) {
     lastKeyStillDown = false;
 
-    // todo brightness & media keys in keyup
     if(virtualKeyList.contains(key))
         doKeyboardEvent(virtualKeyList.value(key), false);
     else if(auxKeyList.contains(key))

@@ -2,6 +2,7 @@
 #include "encryptutils.h"
 #include <QDateTime>
 #include <QThread>
+#include <QDebug>
 
 const int IO_MAX_CHUNK = 1024*30; // 30 kb
 
@@ -195,6 +196,7 @@ bool AbstractedSocket::writeAllData(QByteArray data) {
 
     if(wroteSoFar != data.size()) {
         socket->close();
+        qInfo() << "Failed to write data. Closing.";
         return false;
     }
     else
@@ -222,6 +224,7 @@ bool AbstractedSocket::readAllData(QByteArray *data) {
         // No bytes left to read. If Block hasn't finished reading, try wait
         if(readSoFar < data->size() && !waitForReadyRead(2500)) {
             socket->close();
+            qInfo() << "Failed to read data. Closing.";
             return false;
         }
     }

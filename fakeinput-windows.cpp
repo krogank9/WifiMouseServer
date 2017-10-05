@@ -199,8 +199,8 @@ void freeFakeInput() {
 void typeUnicodeChar(ushort c)
 {
     if(virtualKeyList.contains(QString(c))) {
-        keyDown(QString(c)); // this allows for key combos. ctrl+a ctrl+l etc
-        keyUp(QString(c)); // doesn't get registered when you use unicode scan key. need VK_ key
+        keyDown(QString(c)); // This allows for key combos. ctrl+a ctrl+l
+        keyUp(QString(c)); // else it doesn't get registered when you use unicode scan key. need VK_ key
     }
     else if(virtualKeyList.contains(QString(c).toLower())) {
         keyDown("Shift");
