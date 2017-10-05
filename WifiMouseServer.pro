@@ -19,6 +19,8 @@ macx {
     LIBS += -framework ApplicationServices
     SOURCES += fakeinput-mac.cpp
     ICON = $${PWD}/MacIcon.icns
+    #note: on Mac had to edit ~/Qt/ver/mkspecs/macx-clang/Info.plist to add
+    #LSUIElement 1 to hide from dock
 }
 linux {
     LIBS += -lxdo
