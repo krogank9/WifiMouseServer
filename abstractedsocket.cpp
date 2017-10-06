@@ -1,6 +1,5 @@
 #include "abstractedsocket.h"
 #include "encryptutils.h"
-#include "fakeinput.h"
 #include <QDateTime>
 #include <QThread>
 #include <QDebug>
@@ -39,11 +38,30 @@ AbstractedSocket::AbstractedSocket(QIODevice *socket, bool bluetooth)
 {
     this->socket = socket;
     this->socketIsBluetooth = bluetooth;
+    timeoutTimer.setSingleShot(true);
+    QObject::connect(&timeoutTimer, SIGNAL(timeout()), this, SLOT(timeout()));
+    QObject::connect(socket, SIGNAL(readyRead()), this, SLOT(readyRead()));
+    QObject::connect(socket, SIGNAL(bytesWritten(qint64)), this, SLOT(bytesWritten()));
 }
 
 AbstractedSocket::~AbstractedSocket()
 {
     delete socket;
+}
+
+void AbstractedSocket::timeout()
+{
+    eventLoop.quit();
+}
+
+void AbstractedSocket::bytesWritten()
+{
+    eventLoop.quit();
+}
+
+void AbstractedSocket::readyRead()
+{
+    eventLoop.quit();
 }
 
 void AbstractedSocket::initSession(long iv, QByteArray passHash) {
@@ -62,12 +80,15 @@ QByteArray AbstractedSocket::getSessionHash() {
 bool AbstractedSocket::waitForBytesWritten(qint64 ms) {
     qint64 until = QDateTime::currentMSecsSinceEpoch() + ms;
 
-    eventLoop.processEvents();
-    while(QDateTime::currentMSecsSinceEpoch() < until
+    while(socket->bytesToWrite() > 0
           && !QThread::currentThread()->isInterruptionRequested()
-          && socket->bytesToWrite() > 0) {
-        eventLoop.processEvents();
-        FakeInput::platformIndependentSleepMs(15);
+          && QDateTime::currentMSecsSinceEpoch() < until) {
+        timeoutTimer.setInterval(until - QDateTime::currentMSecsSinceEpoch());
+        timeoutTimer.start();
+
+        eventLoop.exec();
+
+        timeoutTimer.stop();
     }
 
     return socket->bytesToWrite() == 0;
@@ -79,8 +100,12 @@ bool AbstractedSocket::waitForReadyRead(qint64 ms) {
     while(socket->bytesAvailable() == 0
           && !QThread::currentThread()->isInterruptionRequested()
           && QDateTime::currentMSecsSinceEpoch() < until) {
-        eventLoop.processEvents();
-        FakeInput::platformIndependentSleepMs(15);
+        timeoutTimer.setInterval(until - QDateTime::currentMSecsSinceEpoch());
+        timeoutTimer.start();
+
+        eventLoop.exec();
+
+        timeoutTimer.stop();
     }
 
     return socket->bytesAvailable() > 0;
@@ -175,7 +200,7 @@ bool AbstractedSocket::writeAllData(QByteArray data) {
         return false;
     }
     else
-        return socket->bytesToWrite() == 0 || waitForBytesWritten(1000);
+        return socket->bytesToWrite() == 0 || (waitForBytesWritten(1000) && socket->bytesToWrite() == 0);
 }
 
 bool AbstractedSocket::readAllData(QByteArray *data) {
