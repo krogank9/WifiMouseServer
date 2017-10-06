@@ -160,7 +160,7 @@ void MainWindow::startSvgAnimation()
 void MainWindow::clickMaximized()
 {
     this->show();
-    this->activateWindow();
+    this->raise();
 }
 
 void MainWindow::clickMinimized()
