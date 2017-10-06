@@ -38,12 +38,6 @@ private:
     QByteArray sessionPasswordHash;
 
     QEventLoop eventLoop;
-    QTimer timeoutTimer;
-
-public slots:
-    void timeout();
-    void readyRead();
-    void bytesWritten();
 };
 
 #endif // ABSTRACTEDSOCKET_H
