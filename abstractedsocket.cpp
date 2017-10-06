@@ -1,5 +1,6 @@
 #include "abstractedsocket.h"
 #include "encryptutils.h"
+#include "fakeinput.h"
 #include <QDateTime>
 #include <QThread>
 #include <QDebug>
@@ -81,6 +82,7 @@ bool AbstractedSocket::waitForBytesWritten(qint64 ms) {
     qint64 until = QDateTime::currentMSecsSinceEpoch() + ms;
 
     while(socket->bytesToWrite() > 0
+          && socket->isOpen()
           && !QThread::currentThread()->isInterruptionRequested()
           && QDateTime::currentMSecsSinceEpoch() < until) {
         timeoutTimer.setInterval(until - QDateTime::currentMSecsSinceEpoch());
@@ -98,6 +100,7 @@ bool AbstractedSocket::waitForReadyRead(qint64 ms) {
     qint64 until = QDateTime::currentMSecsSinceEpoch() + ms;
 
     while(socket->bytesAvailable() == 0
+          && socket->isOpen()
           && !QThread::currentThread()->isInterruptionRequested()
           && QDateTime::currentMSecsSinceEpoch() < until) {
         timeoutTimer.setInterval(until - QDateTime::currentMSecsSinceEpoch());
