@@ -118,18 +118,17 @@ void NetworkThread::startInputLoop(AbstractedSocket *socket)
         QString message = socket->readString(true);
 
         qint64 lastZoomEvent = 0;
-        if(message.startsWith("Zoom") == false && message != "PING")
-            FakeInput::stopZoom();
+        if(message.startsWith("Zoom") == false) {
+            // stop zooming if last event was >1s ago or a new event occurred
+            if(message != "PING" || QDateTime::currentMSecsSinceEpoch() - lastZoomEvent > 500)
+                FakeInput::stopZoom();
+        }
 
         if(message == "PING") {
             if( memcmp(getPassword().data(), socket->getSessionHash().data(), 16) != 0)
                 break;
             qInfo() << "Pinging... " << ++pingCount << "\n";
             socket->writeString("PING", true);
-
-            // stop zooming if last event was >1s ago
-            if(QDateTime::currentMSecsSinceEpoch() - lastZoomEvent < 1000)
-                continue;
         }
         else if(message.startsWith("MouseMove ")) {
             message.remove("MouseMove ");
