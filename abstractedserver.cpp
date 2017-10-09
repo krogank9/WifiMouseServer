@@ -13,8 +13,8 @@ AbstractedServer::AbstractedServer()
   timeoutTimer(this),
   pendingSocket(0)
 {
-    //tcpServer.setMaxPendingConnections(1);
-    //bluetoothServer.setMaxPendingConnections(1);
+    tcpServer.setMaxPendingConnections(1);
+    bluetoothServer.setMaxPendingConnections(1);
 
     QObject::connect(&tcpServer, SIGNAL(newConnection()), this, SLOT(newTcpConnection()));
     QObject::connect(&bluetoothServer, SIGNAL(newConnection()), this, SLOT(newBluetoothConnection()));

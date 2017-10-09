@@ -302,6 +302,26 @@ void fileManagerCommand(QString command, AbstractedSocket *socket)
     }
 }
 
+QPixmap grabScreens() {
+  auto screens = QGuiApplication::screens();
+  QList<QPixmap> scrs;
+  int w = 0, h = 0, p = 0;
+  foreach (auto scr, screens) {
+    QPixmap pix = scr->grabWindow(0);
+    w += pix.width();
+    if (h < pix.height()) h = pix.height();
+    scrs << pix;
+  }
+  QPixmap final(w, h);
+  QPainter painter(&final);
+  final.fill(Qt::black);
+  foreach (auto scr, scrs) {
+    painter.drawPixmap(QPoint(p, 0), scr);
+    p += scr.width();
+  }
+  return final;
+}
+
 void sendScreenJPG(QString opts, AbstractedSocket *socket)
 {
     QStringList optList = opts.split(" ");
@@ -316,8 +336,7 @@ void sendScreenJPG(QString opts, AbstractedSocket *socket)
         cropRect.setHeight(optList.at(4).toInt());
     }
 
-    QScreen *screen = QGuiApplication::primaryScreen();
-    QPixmap screenshot = screen->grabWindow(0);
+    QPixmap screenshot = grabScreens();
     if(cropped) {
         QPainter painterFrame(&screenshot);
         painterFrame.setCompositionMode(QPainter::CompositionMode_Source);
