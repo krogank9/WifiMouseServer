@@ -336,7 +336,9 @@ void sendScreenJPG(QString opts, AbstractedSocket *socket)
         cropRect.setHeight(optList.at(4).toInt());
     }
 
-    QPixmap screenshot = grabScreens();
+    //QPixmap screenshot = grabScreens();
+    QScreen *screen = QGuiApplication::primaryScreen();
+    QPixmap screenshot = screen->grabWindow(0);
     if(cropped) {
         QPainter painterFrame(&screenshot);
         painterFrame.setCompositionMode(QPainter::CompositionMode_Source);

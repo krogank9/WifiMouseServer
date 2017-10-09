@@ -74,6 +74,10 @@ QByteArray AbstractedSocket::getSessionHash() {
     return sessionPasswordHash;
 }
 
+void AbstractedSocket::closeSocket() {
+    socket->close();
+}
+
 /*********************
  * Public functions  *
  *********************/

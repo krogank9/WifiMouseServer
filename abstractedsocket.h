@@ -28,6 +28,8 @@ public:
     bool writeString(QString str, bool encrypt);
     QString readString(bool decrypt);
 
+    void closeSocket();
+
 private:
     bool readAllData(QByteArray *data);
     bool writeAllData(QByteArray data);

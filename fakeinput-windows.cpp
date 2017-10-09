@@ -161,6 +161,19 @@ void sendMouseEvent(DWORD flags, LONG dx, LONG dy, DWORD mouseData)
     SendInput(1, &input, sizeof(input));
 }
 
+void sendMouseEventAbsolute(DWORD flags, LONG x, LONG y, DWORD mouseData)
+{
+    INPUT input;
+    ZeroMemory(&input, sizeof(input));
+    input.type = INPUT_MOUSE;
+    input.mi.mouseData = mouseData;
+    input.mi.dx = x * (65536 / GetSystemMetrics(SM_CXSCREEN));
+    input.mi.dy = y * (65536 / GetSystemMetrics(SM_CYSCREEN));
+    input.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | flags;
+
+    SendInput(1, &input, sizeof(input));
+}
+
 // SendInput() function doesn't repeat keys, here's a timer to simulate
 // the normal behavior in windows: keys repeating as you hold them down.
 QString lastKeyDown;
@@ -282,7 +295,7 @@ void keyUp(QString key) {
 }
 
 void mouseSetPos(int x, int y) {
-    sendMouseEvent(MOUSEEVENTF_ABSOLUTE, x, y, 0);
+    sendMouseEventAbsolute(MOUSEEVENTF_MOVE, x, y, 0);
 }
 
 void mouseMove(int addX, int addY) {
