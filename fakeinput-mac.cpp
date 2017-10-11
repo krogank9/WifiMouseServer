@@ -116,15 +116,23 @@ void doMouseEvent(CGEventType type, int addX, int addY, CGMouseButton button, bo
     int curY = absolute? 0 : cursor.y;
 
     CGPoint absPos = CGPointMake(curX + addX, curY + addY);
-    if(absPos.x < 0) absPos.x = 0;
-    if(absPos.y < 0) absPos.y = 0;
+    if(absPos.x < 0) {
+        absPos.x = 0;
+    }
+    if(absPos.y < 0) {
+        absPos.y = 0;
+    }
     // Todo: support multiple monitors if this doesn't.
     // Will fix when i have a usable VM. fuck.
     CGRect mainMonitor = CGDisplayBounds(CGMainDisplayID());
     CGFloat monitorHeight = CGRectGetHeight(mainMonitor);
     CGFloat monitorWidth = CGRectGetWidth(mainMonitor);
-    if(absPos.x > monitorWidth) absPos.x = monitorWidth;
-    if(absPos.y > monitorHeight) absPos.y = monitorHeight;
+    if(absPos.x > monitorWidth) {
+        absPos.x = monitorWidth - 1;
+    }
+    if(absPos.y > monitorHeight) {
+        absPos.y = monitorHeight - 1;
+    }
 
     CGEventRef event = CGEventCreateMouseEvent(NULL, type, absPos, button);
     CGEventPost(kCGHIDEventTap, event);
@@ -268,7 +276,7 @@ CGEventType getMouseEventType(int button, bool down) {
 }
 
 void mouseDown(int button) {
-    if(button >= 0 && button <= 3)
+    if(button > 0 && button <= 3)
         buttonDown[button-1] = true;
     doMouseEvent(getMouseEventType(button, true), 0, 0, getCGButton(button));
     platformIndependentSleepMs(15); // sleep for good measure
