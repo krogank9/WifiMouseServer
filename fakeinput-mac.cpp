@@ -123,7 +123,6 @@ void doMouseEvent(CGEventType type, int addX, int addY, CGMouseButton button, bo
         absPos.y = 0;
     }
     // Todo: support multiple monitors if this doesn't.
-    // Will fix when i have a usable VM. fuck.
     CGRect mainMonitor = CGDisplayBounds(CGMainDisplayID());
     CGFloat monitorHeight = CGRectGetHeight(mainMonitor);
     CGFloat monitorWidth = CGRectGetWidth(mainMonitor);
