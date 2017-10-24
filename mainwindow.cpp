@@ -26,6 +26,7 @@ MainWindow::MainWindow(QWidget *parent) :
     this->setFixedSize(this->geometry().width(),this->geometry().height());
 
     this->setWindowFlags(Qt::Dialog);
+    this->setWindowFlag(Qt::WindowContextHelpButtonHint, false);
 
     rotatingSquare = new RotatingSquare(0, 0, 0, this->width()/7, 35, 35, 35);
     loadSvgs();
