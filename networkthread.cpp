@@ -116,6 +116,7 @@ void NetworkThread::startInputLoop(AbstractedSocket *socket)
         }
 
         QString message = socket->readString(true);
+        qInfo() << message;
 
         qint64 lastZoomEvent = 0;
         if(message.startsWith("Zoom") == false) {

@@ -42,7 +42,8 @@ SOURCES += main.cpp\
     encryptutils.cpp \
     aes.c \
     fileutils.cpp \
-    abstractedsocket.cpp
+    abstractedsocket.cpp \
+    helpipdialog.cpp
 
 HEADERS  += mainwindow.h \
     fixedsvgwidget.h \
@@ -55,10 +56,12 @@ HEADERS  += mainwindow.h \
     encryptutils.h \
     aes.h \
     fileutils.h \
-    abstractedsocket.h
+    abstractedsocket.h \
+    helpipdialog.h
 
 FORMS    += mainwindow.ui \
-    setpassworddialog.ui
+    setpassworddialog.ui \
+    helpipdialog.ui
 
 RESOURCES += \
     resources.qrc

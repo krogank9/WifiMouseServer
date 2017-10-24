@@ -8,6 +8,7 @@
 #include "fixedsvgwidget.h"
 #include "rotatingsquare.h"
 #include "setpassworddialog.h"
+#include "helpipdialog.h"
 
 namespace Ui {
 class MainWindow;
@@ -28,6 +29,7 @@ private:
     Ui::MainWindow *ui;
     QIcon *programIcon;
     SetPasswordDialog *setPasswordDialog;
+    HelpIpDialog *helpIpDialog;
 
     QByteArray serverPassword;
 
@@ -63,6 +65,7 @@ public Q_SLOTS:
     void clickMinimized();
     void clickQuit();
     void clickSetPassword();
+    void clickIpHelper();
 
     QByteArray getPassword();
     void setPassword(QString newPassword);

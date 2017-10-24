@@ -125,9 +125,9 @@
        </spacer>
       </item>
       <item>
-       <widget class="QPushButton" name="quitButton">
+       <widget class="QPushButton" name="helpButton">
         <property name="text">
-         <string>Quit</string>
+         <string>Help</string>
         </property>
        </widget>
       </item>

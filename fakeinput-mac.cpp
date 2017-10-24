@@ -271,6 +271,7 @@ void mouseDown(int button) {
     if(button >= 0 && button <= 3)
         buttonDown[button-1] = true;
     doMouseEvent(getMouseEventType(button, true), 0, 0, getCGButton(button));
+    platformIndependentSleepMs(15); // sleep for good measure
 }
 
 void mouseUp(int button) {

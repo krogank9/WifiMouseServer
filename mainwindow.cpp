@@ -7,6 +7,7 @@
 #include <QSettings>
 #include <QCryptographicHash>
 #include <QMessageBox>
+#include <QCloseEvent>
 #include "fakeinput.h"
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -17,13 +18,14 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
 
     setPasswordDialog = new SetPasswordDialog(this);
+    helpIpDialog = new HelpIpDialog(this);
 
     loadSettings();
 
     this->setWindowIcon(*programIcon);
     this->setFixedSize(this->geometry().width(),this->geometry().height());
 
-    this->setWindowFlags(Qt::Dialog | Qt::WindowTitleHint);
+    this->setWindowFlags(Qt::Dialog);
 
     rotatingSquare = new RotatingSquare(0, 0, 0, this->width()/7, 35, 35, 35);
     loadSvgs();
@@ -179,21 +181,27 @@ void MainWindow::clickSetPassword()
         setPasswordDialog->show();
 }
 
+void MainWindow::clickIpHelper()
+{
+    helpIpDialog->show();
+}
+
 void MainWindow::createActions()
 {
     quitAction = new QAction(tr("Quit"),this);
     connect(quitAction, SIGNAL(triggered()), this, SLOT(clickQuit()));
-    connect(ui->quitButton, SIGNAL(released()), this, SLOT(clickQuit()));
+    connect(ui->minimizeButton, SIGNAL(released()), this, SLOT(clickMinimized()));
 
     maximizeAction = new QAction(tr("Maximize"),this);
     connect(maximizeAction, SIGNAL(triggered()), this, SLOT(clickMaximized()));
-    connect(ui->minimizeButton, SIGNAL(released()), this, SLOT(clickMinimized()));
 
     passwordAction = new QAction(tr("Set password"),this);
     connect(passwordAction, SIGNAL(triggered()), this, SLOT(clickSetPassword()));
     connect(ui->passwordButton, SIGNAL(released()), this, SLOT(clickSetPassword()));
 
     connect(ui->startMinimizedCheck, SIGNAL(released()), this, SLOT(saveSettings()));
+
+    connect(ui->helpButton, SIGNAL(released()), this, SLOT(clickIpHelper()));
 
     clientTitleAction = new QAction("Client IP", this);
     clientTitleAction->setEnabled(false);

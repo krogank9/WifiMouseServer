@@ -17,10 +17,7 @@ namespace FakeInput {
 
 QString desktopSession = "";
 
-QString getOsName()
-{
-    return "linux";
-}
+QString getOsName() { return "linux"; }
 
 void platformIndependentSleepMs(qint64 ms) {
     const int MS_TO_NANO_MULTIPLIER = 1000000;
@@ -118,6 +115,7 @@ void mouseSetPos(int x, int y) {
 
 void mouseDown(int button) {
     xdo_mouse_down(xdoInstance, CURRENTWINDOW, button);
+    platformIndependentSleepMs(15); // have to sleep or instantaneous mouse down then up wont register the up
 }
 
 void mouseUp(int button) {
