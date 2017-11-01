@@ -26,8 +26,6 @@ void mouseSetPos(int x, int y);
 void mouseDown(int button);
 void mouseUp(int button);
 void mouseScroll(int amount);
-void zoom(int amount);
-void stopZoom();
 
 void shutdown();
 void restart();

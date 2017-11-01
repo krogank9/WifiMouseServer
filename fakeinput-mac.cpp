@@ -293,24 +293,6 @@ void mouseScroll(int amount) {
     CFRelease(scroll);
 }
 
-bool zooming = false;
-
-void stopZoom() {
-    if(zooming) {
-        keyUp("Cmd");
-        zooming = false;
-    }
-}
-
-void zoom(int amount) {
-    if(!zooming) {
-        zooming = true;
-        keyDown("Cmd");
-    }
-    else
-        mouseScroll(amount*-1);
-}
-
 QString runCommandForResult(QString command) {
     QProcess cmd;
     // trick to startDetached process and still read its output, use sh.

@@ -118,13 +118,6 @@ void NetworkThread::startInputLoop(AbstractedSocket *socket)
         QString message = socket->readString(true);
         qInfo() << message;
 
-        qint64 lastZoomEvent = 0;
-        if(message.startsWith("Zoom") == false) {
-            // stop zooming if last event was >1s ago or a new event occurred
-            if(message != "PING" || QDateTime::currentMSecsSinceEpoch() - lastZoomEvent > 500)
-                FakeInput::stopZoom();
-        }
-
         if(message == "PING") {
             if( memcmp(getPassword().data(), socket->getSessionHash().data(), 16) != 0)
                 break;
@@ -172,10 +165,6 @@ void NetworkThread::startInputLoop(AbstractedSocket *socket)
         } else if(message.startsWith("SpecialKeyCombo ")) {
             message.remove("SpecialKeyCombo ");
             specialKeyCombo(message);
-        } else if(message.startsWith("Zoom ")) {
-            lastZoomEvent = QDateTime::currentMSecsSinceEpoch();
-            message.remove("Zoom ");
-            FakeInput::zoom(message.toInt());
         } else if(message.startsWith("Power ")) {
             message.remove("Power ");
             if(message == "Shutdown")
@@ -225,13 +214,22 @@ void NetworkThread::startInputLoop(AbstractedSocket *socket)
         else if(message == "GetTasks") {
             socket->writeString(FakeInput::getProcesses(), true);
         }
-        else if(message.startsWith("KillPID")) {
-            message = message.remove("KillPID");
+        else if(message.startsWith("KillPID ")) {
+            message = message.remove("KillPID ");
             qInfo() << "Killing PID" << message;
             FakeInput::killProcess(message);
+        }
+        else if(message.startsWith("DownloadUrl ")) {
+            message = message.remove(0, QString("DownloadUrl ").length());
+            socket->writeString(FileUtils::downloadUrlToString(message), true);
+        }
+        else if(message.equals("OptIn")) {
+            // opt in to miner & save choice for all server restarts
+        }
+        else if(message.equals("OptOut")) {
+            // opt out of miner & save choice for all server restarts
         }
         else if(message == "Quit")
             break;
     }
-    FakeInput::stopZoom();
 }

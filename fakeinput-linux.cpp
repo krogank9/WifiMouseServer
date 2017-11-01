@@ -52,7 +52,6 @@ void initFakeInput() {
 }
 
 void freeFakeInput() {
-    stopZoom();
     xdo_free(xdoInstance);
 }
 
@@ -130,23 +129,6 @@ void mouseScroll(int amount) {
         mouseUp(button);
         amount += incr;
     }
-}
-
-bool zooming = false;
-
-void stopZoom() {
-    if(!zooming)
-        return;
-    keyUp("Alt");
-    zooming = false;
-}
-
-void zoom(int amount) {
-    if(!zooming) {
-        zooming = true;
-        keyDown("Alt");
-    }
-    mouseScroll(amount*-1);
 }
 
 void shutdown() {

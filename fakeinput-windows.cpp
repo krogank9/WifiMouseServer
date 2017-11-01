@@ -336,24 +336,6 @@ void mouseScroll(int amount) {
     sendMouseEvent(MOUSEEVENTF_WHEEL, 0, 0, amount*-100);
 }
 
-bool zooming = false;
-int totalZoom = 0;
-
-void stopZoom() {
-    if(!zooming)
-        return;
-    keyUp("Ctrl");
-    zooming = false;
-}
-
-void zoom(int amount) {
-    if(!zooming) {
-        zooming = true;
-        keyDown("Ctrl");
-    }
-    mouseScroll(-amount);
-}
-
 void shutdown() {
     runCommandForResult("shutdown -t 0");
 }

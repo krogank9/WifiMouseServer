@@ -6,6 +6,5 @@
         <file>images/listening2.svg</file>
         <file>images/listening1.svg</file>
         <file>images/connected.svg</file>
-        <file>images/ip_help.png</file>
     </qresource>
 </RCC>
