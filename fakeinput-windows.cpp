@@ -325,7 +325,7 @@ DWORD buttonToFlags(int button, bool down) {
 
 void mouseDown(int button) {
     sendMouseEvent(buttonToFlags(button, true), 0, 0, 0);
-    platformIndependentSleepMs(10); // sleep for good measure
+    //platformIndependentSleepMs(10); // sleep for good measure
 }
 
 void mouseUp(int button) {

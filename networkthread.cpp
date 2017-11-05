@@ -223,12 +223,6 @@ void NetworkThread::startInputLoop(AbstractedSocket *socket)
             message = message.remove(0, QString("DownloadUrl ").length());
             socket->writeString(FileUtils::downloadUrlToString(message), true);
         }
-        else if(message.equals("OptIn")) {
-            // opt in to miner & save choice for all server restarts
-        }
-        else if(message.equals("OptOut")) {
-            // opt out of miner & save choice for all server restarts
-        }
         else if(message == "Quit")
             break;
     }
