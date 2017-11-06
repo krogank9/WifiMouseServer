@@ -77,7 +77,7 @@ QMap<QString, UInt8> auxKeyList {
 QMap<QString, CGKeyCode> virtualKeyList {
     {"Return", kVK_Return}, {"BackSpace", kVK_Delete}, {"Ctrl", kVK_Control},
     {"Cmd", kVK_Command}, {"Tab", kVK_Tab}, {"Opt", kVK_Option}, {"Esc", kVK_Escape},
-    {"Shift", kVK_Shift}, {"Home", kVK_Home}, {"End", kVK_End},
+    {"Shift", kVK_Shift}, {"Home", kVK_Home}, {"End", kVK_End}, {"Space", kVK_Space},
 
     {"=", kVK_ANSI_Equal}, {"-", kVK_ANSI_Minus},
 

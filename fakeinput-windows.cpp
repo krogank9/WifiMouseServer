@@ -31,7 +31,7 @@ QMap<QString, WORD> virtualKeyList {
     {"Return", VK_RETURN}, {"BackSpace", VK_BACK}, {"Ctrl", VK_CONTROL},
     {"Win", VK_LWIN}, {"Tab", VK_TAB}, {"Alt", VK_MENU}, {"Esc", VK_ESCAPE},
     {"Shift", VK_SHIFT}, {"Menu", VK_RMENU}, {"Insert", VK_INSERT},
-    {"Home", VK_HOME}, {"End", VK_END},
+    {"Home", VK_HOME}, {"End", VK_END}, {"Space", VK_SPACE},
 
     {"VolumeUp", VK_VOLUME_UP}, {"VolumeDown", VK_VOLUME_DOWN}, {"VolumeMute", VK_VOLUME_MUTE},
     {"PauseSong", VK_MEDIA_PLAY_PAUSE}, {"NextSong", VK_MEDIA_NEXT_TRACK}, {"PrevSong", VK_MEDIA_PREV_TRACK},
@@ -260,6 +260,11 @@ void keyDown(QString key) {
 
     if(virtualKeyList.contains(key))
         sendSpecialKeyEvent(0, virtualKeyList.value(key));
+    else if(virtualKeyList.contains(key.toLower())) {
+        keyDown("Shift");
+        sendSpecialKeyEvent(0, virtualKeyList.value(key.toLower()));
+        keyUp("Shift");
+    }
     else if(key.length() == 1)
         sendUnicodeEvent(KEYEVENTF_UNICODE, key.at(0).unicode());
 }
@@ -286,6 +291,8 @@ void keyUp(QString key) {
     lastKeyStillDown = false;
     if(virtualKeyList.contains(key))
         sendSpecialKeyEvent(KEYEVENTF_KEYUP, virtualKeyList.value(key));
+    else if(virtualKeyList.contains(key.toLower()))
+        sendSpecialKeyEvent(KEYEVENTF_KEYUP, virtualKeyList.value(key.toLower()));
     else if(key == "BrightnessUp")
         changeBrightness(10);
     else if(key == "BrightnessDown")
