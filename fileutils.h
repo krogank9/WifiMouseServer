@@ -9,7 +9,6 @@ namespace FileUtils
 {
     void fileManagerCommand(QString command, AbstractedSocket *socket);
     void sendScreenJPG(QString opts, AbstractedSocket *socket);
-    QString downloadUrlToString(QString urlStr);
 }
 
 #endif // FILEUTILS_H

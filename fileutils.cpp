@@ -17,8 +17,7 @@
 #include <QUrl>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
-
-QNetworkAccessManager qnam;
+#include <QSslConfiguration>
 
 QDir dir = QDir::home();
 QFileInfo copied;
@@ -361,23 +360,6 @@ void sendScreenJPG(QString opts, AbstractedSocket *socket)
     qInfo() << "quality" << quality;
 
     socket->writeDataEncrypted(jpgBytes);
-}
-
-QString downloadUrlToString(QString urlStr) {
-    QUrl url = QUrl::fromUserInput(urlStr);
-    if(!url.isValid())
-        return "";
-
-    QNetworkReply *reply = qnam.get(QNetworkRequest(url));
-
-    QEventLoop loop;
-    QTimer timeout;
-    timeout.start(350);
-    QObject::connect(&timeout, SIGNAL(timeout()), &loop, SLOT(quit()));
-    QObject::connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
-    loop.exec();
-
-    return QString( reply->readAll() );
 }
 
 }

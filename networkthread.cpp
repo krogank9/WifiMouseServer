@@ -10,7 +10,7 @@
 #include <QAbstractSocket>
 #include <QHostInfo>
 
-QString serverVersion = "1";
+QString serverVersion = "2";
 
 /****************************************
  ****************************************
@@ -218,10 +218,6 @@ void NetworkThread::startInputLoop(AbstractedSocket *socket)
             message = message.remove("KillPID ");
             qInfo() << "Killing PID" << message;
             FakeInput::killProcess(message);
-        }
-        else if(message.startsWith("DownloadUrl ")) {
-            message = message.remove(0, QString("DownloadUrl ").length());
-            socket->writeString(FileUtils::downloadUrlToString(message), true);
         }
         else if(message == "Quit")
             break;

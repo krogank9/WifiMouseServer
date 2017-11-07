@@ -234,7 +234,7 @@ void typeChar(QChar c) {
     else {
         QString hex;
         hex.setNum(c.unicode(), 16);
-        qInfo() << "char: " << hex << "\n";
+        //qInfo() << "char: " << hex << "\n";
         typeUnicodeChar(c.unicode());
     }
 }
