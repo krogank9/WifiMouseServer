@@ -84,7 +84,7 @@ void typeString(QString string) {
 
 QMap<QString, QString> xorgKeyNames {
     {"Ctrl", "Control"}, {"Esc", "Escape"}, {"Win", "Super_L"},
-    {"PgU", "Page_Up"}, {"PgD", "Page_Down"},
+    {"PgU", "Page_Up"}, {"PgD", "Page_Down"}, {"Space", "space"},
 
     {"VolumeUp", "XF86AudioRaiseVolume"}, {"VolumeDown", "XF86AudioLowerVolume"}, {"VolumeMute", "XF86AudioMute"},
     {"PauseSong", "XF86AudioPlay"}, {"NextSong","XF86AudioNext"}, {"PrevSong", "XF86AudioPrev"},

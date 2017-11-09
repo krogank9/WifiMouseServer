@@ -23,11 +23,12 @@ DefaultDirName={pf}\{#MyAppName}
 DisableDirPage=no
 DisableProgramGroupPage=yes
 OutputBaseFilename=Install WifiMouseServer
-SetupIconFile=C:\Users\logan\Downloads\icon.ico
-UninstallDisplayIcon=C:\Users\logan\Downloads\icon.ico
+SetupIconFile=C:\msys64\home\logan\WifiMouseServer\win_icon.ico
+UninstallDisplayIcon=C:\msys64\home\logan\WifiMouseServer\win_icon.ico
 UninstallDisplayName={#MyAppName}
 Compression=lzma
 SolidCompression=yes
+OutputDir=C:\msys64\home\logan\WifiMouseServer_exes
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -36,27 +37,27 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\cygwin64\home\logan\release_package\WifiMouseServer.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\cygwin64\home\logan\release_package\concrt140.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\cygwin64\home\logan\release_package\D3Dcompiler_47.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\cygwin64\home\logan\release_package\libEGL.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\cygwin64\home\logan\release_package\libGLESV2.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\cygwin64\home\logan\release_package\msvcp140.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\cygwin64\home\logan\release_package\opengl32sw.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\cygwin64\home\logan\release_package\Qt5Bluetooth.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\cygwin64\home\logan\release_package\Qt5Core.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\cygwin64\home\logan\release_package\Qt5Gui.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\cygwin64\home\logan\release_package\Qt5Network.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\cygwin64\home\logan\release_package\Qt5Svg.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\cygwin64\home\logan\release_package\Qt5Widgets.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\cygwin64\home\logan\release_package\vccorlib140.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\cygwin64\home\logan\release_package\vcruntime140.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\logan\Downloads\icon.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\msys64\home\logan\release_package\WifiMouseServer.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\msys64\home\logan\release_package\concrt140.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\msys64\home\logan\release_package\D3Dcompiler_47.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\msys64\home\logan\release_package\libEGL.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\msys64\home\logan\release_package\libGLESV2.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\msys64\home\logan\release_package\msvcp140.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\msys64\home\logan\release_package\opengl32sw.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\msys64\home\logan\release_package\Qt5Bluetooth.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\msys64\home\logan\release_package\Qt5Core.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\msys64\home\logan\release_package\Qt5Gui.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\msys64\home\logan\release_package\Qt5Network.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\msys64\home\logan\release_package\Qt5Svg.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\msys64\home\logan\release_package\Qt5Widgets.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\msys64\home\logan\release_package\vccorlib140.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\msys64\home\logan\release_package\vcruntime140.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\msys64\home\logan\WifiMouseServer\win_icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 
-Source: "C:\cygwin64\home\logan\release_package\bearer\*"; DestDir: "{app}\bearer\"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "C:\cygwin64\home\logan\release_package\iconengines\*"; DestDir: "{app}\iconengines\"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "C:\cygwin64\home\logan\release_package\imageformats\*"; DestDir: "{app}\imageformats\"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "C:\cygwin64\home\logan\release_package\platforms\*"; DestDir: "{app}\platforms\"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\msys64\home\logan\release_package\bearer\*"; DestDir: "{app}\bearer\"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\msys64\home\logan\release_package\iconengines\*"; DestDir: "{app}\iconengines\"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\msys64\home\logan\release_package\imageformats\*"; DestDir: "{app}\imageformats\"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\msys64\home\logan\release_package\platforms\*"; DestDir: "{app}\platforms\"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Dirs]
@@ -67,8 +68,8 @@ Name: {app}\imageformats; Permissions: users-modify
 Name: {app}\platforms; Permissions: users-modify
 
 [Icons]
-Name: "{commonprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\icon.ico";
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\icon.ico"; Tasks: desktopicon
+Name: "{commonprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\win_icon.ico";
+Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\win_icon.ico"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
