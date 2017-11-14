@@ -97,7 +97,7 @@ QMap<QString, CGKeyCode> virtualKeyList {
     {"m", kVK_ANSI_M}, {"n", kVK_ANSI_N}, {"o", kVK_ANSI_O}, {"p", kVK_ANSI_P},
     {"q", kVK_ANSI_Q}, {"r", kVK_ANSI_R}, {"s", kVK_ANSI_S}, {"t", kVK_ANSI_T},
     {"u", kVK_ANSI_U}, {"v", kVK_ANSI_V}, {"w", kVK_ANSI_W}, {"x", kVK_ANSI_X},
-    {"y", kVK_ANSI_Y}, {"z", kVK_ANSI_Z}
+    {"y", kVK_ANSI_Y}, {"z", kVK_ANSI_Z}, {" ", kVK_Space}
 };
 
 namespace FakeInput {

@@ -49,7 +49,7 @@ QMap<QString, WORD> virtualKeyList {
     {"g", 0x47}, {"h", 0x48}, {"i", 0x49}, {"j", 0x4a}, {"k", 0x4b}, {"l", 0x4c},
     {"m", 0x4d}, {"n", 0x4e}, {"o", 0x4f}, {"p", 0x50}, {"q", 0x51}, {"r", 0x52},
     {"s", 0x53}, {"t", 0x54}, {"u", 0x55}, {"v", 0x56}, {"w", 0x57}, {"x", 0x58},
-    {"y", 0x59}, {"z", 0x5a}
+    {"y", 0x59}, {"z", 0x5a}, {" ", VK_SPACE}
 };
 
 QList<QFileInfo> recurseAndGetShortcutList(QDir dir, int recursions = 0) {
