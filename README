@@ -7,7 +7,7 @@ Compile: qmake && make
 
 Dependencies
 Qt5,
-Linux: libxdo
+Linux: libgl1-mesa-dev libxtst-dev libx11-dev
 
 Todo:
 -Simulate mac trackpad zoom
