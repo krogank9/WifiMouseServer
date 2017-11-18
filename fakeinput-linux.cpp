@@ -6,12 +6,14 @@
 #include <QDebug>
 #include <QMap>
 extern "C" {
-    #include <xdo.h>
+    #include <X11/Xlib.h>
+    #include <X11/extensions/XTest.h>
+    #include <X11/keysym.h>
+    #include <X11/XF86keysym.h>
     #include <ctime>
 }
 #include "fakeinput.h"
-
-//note: compile with: gcc main.cpp linux.cpp -lxdo
+#include "fakeinput-linux-keysyms-map.h"
 
 namespace FakeInput {
 
@@ -36,7 +38,7 @@ QString runCommandForResult(QString command) {
     return cmd.readAllStandardOutput() + cmd.readAllStandardError();
 }
 
-xdo_t *xdoInstance;
+Display *dpy;
 QString backupApplicationsList;
 
 void initFakeInput() {
@@ -48,77 +50,129 @@ void initFakeInput() {
 
     desktopSession = runCommandForResult("echo $DESKTOP_SESSION").simplified();
     qInfo() << "desktopSession" << desktopSession;
-    xdoInstance = xdo_new(0);
+
+    dpy = XOpenDisplay(NULL);
 }
 
 void freeFakeInput() {
-    xdo_free(xdoInstance);
-}
-
-void typeChar(ushort c) {
-    if(c == '\n') {
-        keyTap("Return");
-    }
-    else if(c >= 0x00A0) { // 0x00A0 is the end of ASCII characters
-        QString unicodeHex;
-        unicodeHex.setNum(c, 16);
-        unicodeHex = "U"+unicodeHex;
-
-        // Note: this starts glitching out if you set the pause too short.
-        // Maybe because for unicode characters, the keys must be remapped.
-        // 95ms seems to be sufficient.
-        xdo_send_keysequence_window(xdoInstance, CURRENTWINDOW, unicodeHex.toLocal8Bit().data(), 95000);
-    }
-    else {
-        char str[] = {(char)c, '\0'};
-        xdo_enter_text_window(xdoInstance, CURRENTWINDOW, str, 12000);
-    }
 }
 
 void typeString(QString string) {
+    // Note: this starts glitching out if you set the pause too short.
+    // Maybe because for unicode characters, the keys must be remapped.
+    // 95ms seems to be sufficient.
+    //xdo_send_keysequence_window(xdoInstance, CURRENTWINDOW, unicodeHex.toLocal8Bit().data(), 95000);
     int i = 0;
     while(i < string.length()) {
-        typeChar( string.at(i++).unicode() );
+        QChar c = string.at(i++);
+        if(c == '\n')
+            keyTap("Return");
+        else
+            keyTap(c);
     }
 }
 
-QMap<QString, QString> xorgKeyNames {
-    {"Ctrl", "Control"}, {"Esc", "Escape"}, {"Win", "Super_L"},
-    {"PgU", "Page_Up"}, {"PgD", "Page_Down"}, {"Space", "space"},
+QMap<QString, unsigned int> xorgKeyCodes {
+    {"Return", XK_Return}, {"BackSpace", XK_BackSpace}, {"Ctrl", XK_Control_L},
+    {"Win", XK_Super_L}, {"Tab", XK_Tab}, {"Alt", XK_Alt_L}, {"Esc", XK_Escape},
+    {"Shift", XK_Shift_L}, {"Menu", XK_Menu}, {"Insert", XK_Insert},
+    {"Home", XK_Home}, {"End", XK_End}, {"Space", XK_space}, {" ", XK_space},
 
-    {"VolumeUp", "XF86AudioRaiseVolume"}, {"VolumeDown", "XF86AudioLowerVolume"}, {"VolumeMute", "XF86AudioMute"},
-    {"PauseSong", "XF86AudioPlay"}, {"NextSong","XF86AudioNext"}, {"PrevSong", "XF86AudioPrev"},
+    {"VolumeUp", XF86XK_AudioRaiseVolume}, {"VolumeDown", XF86XK_AudioLowerVolume}, {"VolumeMute", XF86XK_AudioMute},
+    {"PauseSong", XF86XK_AudioPause}, {"NextSong", XF86XK_AudioNext}, {"PrevSong", XF86XK_AudioPrev},
 
-    {"BrightnessUp", "XF86MonBrightnessUp"}, {"BrightnessDown", "XF86MonBrightnessDown"}
+    {"BrightnessUp", XF86XK_KbdBrightnessUp}, {"BrightnessDown", XF86XK_KbdBrightnessDown},
+
+    {"Left", XK_Left}, {"Right", XK_Right}, {"Up", XK_Up}, {"Down", XK_Down},
+    {"PgU", XK_Page_Up}, {"PgD", XK_Page_Down},
+
+    {"F1", XK_F1}, {"F2", XK_F2}, {"F3", XK_F3}, {"F4", XK_F4}, {"F5", XK_F5}, {"F6", XK_F6},
+    {"F7", XK_F7}, {"F8", XK_F8}, {"F9", XK_F9}, {"F10", XK_F10}, {"F11", XK_F11}, {"F12", XK_F12},
+
+    {"0", XK_0}, {"1", XK_1}, {"2", XK_2}, {"3", XK_3}, {"4", XK_4}, {"5", XK_5},
+    {"6", XK_6}, {"7", XK_7}, {"8", XK_8}, {"9", XK_9},
+
+    {"A", XK_A}, {"B", XK_B}, {"C", XK_C}, {"D", XK_D}, {"E", XK_E}, {"F", XK_F},
+    {"G", XK_G}, {"H", XK_H}, {"I", XK_I}, {"J", XK_J}, {"K", XK_K}, {"L", XK_L},
+    {"M", XK_M}, {"N", XK_N}, {"O", XK_O}, {"P", XK_P}, {"Q", XK_Q}, {"R", XK_R},
+    {"S", XK_S}, {"T", XK_T}, {"U", XK_U}, {"V", XK_V}, {"W", XK_W}, {"X", XK_X},
+    {"Y", XK_Y}, {"Z", XK_Z},
+
+    {"a", XK_a}, {"b", XK_b}, {"c", XK_c}, {"d", XK_d}, {"e", XK_e}, {"f", XK_f},
+    {"g", XK_g}, {"h", XK_h}, {"i", XK_i}, {"j", XK_j}, {"k", XK_k}, {"l", XK_l},
+    {"m", XK_m}, {"n", XK_n}, {"o", XK_o}, {"p", XK_p}, {"q", XK_q}, {"r", XK_r},
+    {"s", XK_s}, {"t", XK_t}, {"u", XK_u}, {"v", XK_v}, {"w", XK_w}, {"x", XK_x},
+    {"y", XK_y}, {"z", XK_z},
+
+    {"\\", XK_backslash}, {"'", XK_apostrophe}, {",", XK_comma}, {"-", XK_minus},
+    {".", XK_period}, {"/", XK_slash}, {";", XK_semicolon}, {"=", XK_equal},
+    {"[", XK_bracketleft}, {"]", XK_bracketright}, {"`", XK_grave},
+    {"<", XK_less},
 };
 
+QMap<QString, unsigned int> xorgUpKeyCodes {
+    {"!", XK_exclam}, {"\"", XK_quotedbl}, {"#", XK_numbersign}, {"$", XK_dollar},
+    {"%", XK_percent}, {"&", XK_ampersand}, {"(", XK_parenleft},
+    {")", XK_parenright}, {"*", XK_asterisk}, {"+", XK_plus},
+    {":", XK_colon}, {">", XK_greater}, {"~", XK_asciitilde},
+    {"?", XK_question}, {"@", XK_at}, {"^", XK_asciicircum}, {"_", XK_underscore},
+    {"|", XK_bar}, {"{", XK_braceleft}, {"}", XK_braceright},
+};
+
+unsigned int getUnicodeKeycode(QString key) {
+    if(xorgKeyCodes.contains(key))
+        return XKeysymToKeycode(dpy, xorgKeyCodes.value(key));
+    else if(xorgUpKeyCodes.contains(key))
+        return XKeysymToKeycode(dpy, xorgUpKeyCodes.value(key));
+    else {
+        KeySym keysyms[] = { unicodeKeySyms.value(key, 0) };
+        XChangeKeyboardMapping(dpy, 999, 1, keysyms, 1);
+        return 999;
+    }
+}
+
 void keyTap(QString key) {
-    xdo_send_keysequence_window(xdoInstance, CURRENTWINDOW, xorgKeyNames.value(key, key).toLocal8Bit(), 12000);
+    if( key.length() == 1 && (key.toLower() != key || xorgUpKeyCodes.contains(key)) )
+        keyDown("Shift");
+
+    unsigned int keycode = getUnicodeKeycode(key);
+    XTestFakeKeyEvent(dpy, keycode, 1, 0);
+    XTestFakeKeyEvent(dpy, keycode, 0, 0);
+    XFlush(dpy);
+
+    if( key.length() == 1 && (key.toLower() != key || xorgUpKeyCodes.contains(key)) )
+        keyUp("Shift");
 }
 
 void keyDown(QString key) {
-    xdo_send_keysequence_window_down(xdoInstance, CURRENTWINDOW, xorgKeyNames.value(key, key).toLocal8Bit(), 12000);
+    XTestFakeKeyEvent(dpy, getUnicodeKeycode(key), 1, 0);
+    XFlush(dpy);
 }
 
 void keyUp(QString key) {
-    xdo_send_keysequence_window_up(xdoInstance, CURRENTWINDOW, xorgKeyNames.value(key, key).toLocal8Bit(), 12000);
+    XTestFakeKeyEvent(dpy, getUnicodeKeycode(key), 0, 0);
+    XFlush(dpy);
 }
 
 void mouseMove(int addX, int addY) {
-    xdo_move_mouse_relative(xdoInstance, addX, addY);
+    XTestFakeRelativeMotionEvent(dpy, addX, addY, 1);
+    XFlush(dpy);
 }
 
 void mouseSetPos(int x, int y) {
-    xdo_move_mouse(xdoInstance, x, y, 0);
+    XTestFakeMotionEvent(dpy, 0, x, y, 0);
+    XFlush(dpy);
 }
 
 void mouseDown(int button) {
-    xdo_mouse_down(xdoInstance, CURRENTWINDOW, button);
+    XTestFakeButtonEvent(dpy, button, 1, 0);
+    XFlush(dpy);
     platformIndependentSleepMs(15); // have to sleep or instantaneous mouse down then up wont register the up
 }
 
 void mouseUp(int button) {
-    xdo_mouse_up(xdoInstance, CURRENTWINDOW, button);
+    XTestFakeButtonEvent(dpy, button, 0, 0);
+    XFlush(dpy);
 }
 
 void mouseScroll(int amount) {

@@ -23,8 +23,11 @@ macx {
     #LSUIElement 1 to hide from dock
 }
 linux {
-    LIBS += -lxdo
+    # to compile qt statically:
+    #./configure -static -prefix /home/computer/Qt-static -release -nomake examples -skip qtwebengine -qt-xcb -qt-xkbcommon
+    LIBS += -lXtst -lX11
     SOURCES += fakeinput-linux.cpp
+    HEADERS += fakeinput-linux-keysyms-map.h
 }
 
 TARGET = WifiMouseServer
