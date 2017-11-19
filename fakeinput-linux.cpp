@@ -167,7 +167,7 @@ void mouseSetPos(int x, int y) {
 void mouseDown(int button) {
     XTestFakeButtonEvent(dpy, button, 1, 0);
     XFlush(dpy);
-    platformIndependentSleepMs(15); // have to sleep or instantaneous mouse down then up wont register the up
+    platformIndependentSleepMs(12);
 }
 
 void mouseUp(int button) {
