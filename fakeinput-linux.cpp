@@ -167,13 +167,14 @@ void mouseSetPos(int x, int y) {
 void mouseDown(int button) {
     XTestFakeButtonEvent(dpy, button, 1, 0);
     XFlush(dpy);
-    platformIndependentSleepMs(12);
 }
 
 void mouseUp(int button) {
     XTestFakeButtonEvent(dpy, button, 0, 0);
     XFlush(dpy);
 }
+
+int totalScroll = 0;
 
 void mouseScroll(int amount) {
     int button = amount > 0 ? 5:4;
@@ -182,6 +183,11 @@ void mouseScroll(int amount) {
         mouseDown(button);
         mouseUp(button);
         amount += incr;
+        totalScroll++;
+        if(totalScroll > 10) {
+            platformIndependentSleepMs(15);
+            totalScroll = 0;
+        }
     }
 }
 

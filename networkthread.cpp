@@ -123,7 +123,7 @@ void NetworkThread::startInputLoop(AbstractedSocket *socket)
         if(message == "PING") {
             if( memcmp(getPassword().data(), socket->getSessionHash().data(), 16) != 0)
                 break;
-            //qInfo() << "Pinging... " << ++pingCount << "\n";
+            qInfo() << "Pinging... " << ++pingCount << "\n";
             socket->writeString("PING", true);
         }
         else if(message.startsWith("MouseMove ")) {
