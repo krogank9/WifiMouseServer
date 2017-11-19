@@ -4,14 +4,8 @@
 // is included below.
 #define WINVER 0x0500
 #include <Windows.h>
-#ifdef _MSC_VER
- #pragma comment(lib, "user32.lib")
- #pragma comment(lib, "pdh.lib")
-#endif
-#include <Pdh.h>
+#include <pdh.h>
 #include "tchar.h"
-
-// Note: must compile with MSVC++ 2015
 
 #include <QDateTime>
 #include <QString>
@@ -198,7 +192,8 @@ void initFakeInput() {
 
     PdhOpenQuery(NULL, NULL, &cpuQuery);
     // You can also use L"\\Processor(*)\\% Processor Time" and get individual CPU values with PdhGetFormattedCounterArray()
-    PdhAddEnglishCounter(cpuQuery, L"\\Processor(_Total)\\% Processor Time", NULL, &cpuTotal);
+    //PdhAddEnglishCounter(cpuQuery, L"\\Processor(_Total)\\% Processor Time", NULL, &cpuTotal); // old, changed for mingw
+    PdhAddCounterW(cpuQuery, L"\\Processor(_Total)\\% Processor Time", NULL, &cpuTotal);
     PdhCollectQueryData(cpuQuery);
 
     programsList = getProgramsList();

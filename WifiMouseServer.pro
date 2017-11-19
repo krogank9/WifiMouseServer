@@ -14,6 +14,7 @@ QT += bluetooth
 
 win32 {
     SOURCES += fakeinput-windows.cpp
+    LIBS += -luser32 -lpdh
 }
 macx {
     LIBS += -framework ApplicationServices
