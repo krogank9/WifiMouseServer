@@ -29,6 +29,7 @@ linux {
     LIBS += -lXtst -lX11
     SOURCES += fakeinput-linux.cpp
     HEADERS += fakeinput-linux-keysyms-map.h
+    QMAKE_LFLAGS += -no-pie
 }
 
 TARGET = WifiMouseServer
