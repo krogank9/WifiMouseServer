@@ -10,5 +10,4 @@ Qt5,
 Linux: libgl1-mesa-dev libxtst-dev libx11-dev
 
 Todo:
--Simulate mac trackpad zoom
--Joystick emulation
+-clean up code
