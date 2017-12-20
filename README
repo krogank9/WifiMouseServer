@@ -1,7 +1,7 @@
 WifiMouseServer: Desktop companion app for WifiMouse on Android.
 
 See the website for more info
-http://wifi-mouse.xyz/
+https://wifimouse.github.io
 
 Compile: qmake && make
 
