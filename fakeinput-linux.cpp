@@ -29,13 +29,16 @@ void platformIndependentSleepMs(qint64 ms) {
     nanosleep(&tim, NULL);
 }
 
-QString runCommandForResult(QString command) {
+QString runCommandForResult(QString command, int maxTime) {
     QProcess cmd;
     // trick to startDetached process and still read its output, use sh.
     // does not work with bash
     cmd.start("/bin/sh", QStringList()<< "-c" << command);
-    cmd.waitForFinished(250);
+    cmd.waitForFinished(maxTime);
     return cmd.readAllStandardOutput() + cmd.readAllStandardError();
+}
+QString runCommandForResult(QString command) {
+    return runCommandForResult(command, 250);
 }
 
 Display *dpy;
@@ -227,7 +230,7 @@ void blank_screen() {
 }
 
 QString getApplicationNames() {
-    QString result = runCommandForResult("grep -LEs 'NoDisplay|OnlyShowIn' /usr/share/applications/* | grep '.*.desktop' | xargs grep -hm 1 '^Name=' | sed 's/^.....//'");
+    QString result = runCommandForResult("grep -LEs 'NoDisplay|OnlyShowIn' /usr/share/applications/* | grep '.*.desktop' | xargs grep -hm 1 '^Name=' | sed 's/^.....//'", 100);
     // if took too long to get app list return backup list gotten at start
     if(result.indexOf('\n') == result.lastIndexOf('\n'))
         return backupApplicationsList;
