@@ -8,6 +8,7 @@ Compile: qmake && make
 Dependencies
 Qt5,
 Linux: libgl1-mesa-dev libxtst-dev libx11-dev
+qtconnectivity5-dev libqt5svg5-dev
 
 Todo:
 -clean up code
